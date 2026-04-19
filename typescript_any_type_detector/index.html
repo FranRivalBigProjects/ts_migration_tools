@@ -1,21 +1,970 @@
 <!DOCTYPE html>
-<html>
+
+<html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>typescript_any_type_detector</title>
-<link rel="stylesheet" href="styles.css">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TypeScript Any Type Detector – Find & Fix any Usage in Your Codebase</title>
+<meta name="description" content="Paste your TypeScript or JavaScript code and instantly detect every any type usage. Get line numbers, context, severity, and specific type replacement suggestions.">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Mono:wght@400;500&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&display=swap" rel="stylesheet">
+
+<style>
+  :root {
+    --bg:        #0c0e14;
+    --surface:   #12151e;
+    --surface-2: #171b26;
+    --border:    #1e2333;
+    --border-hi: #2c3450;
+    --accent:    #3b82f6;
+    --accent-2:  #818cf8;
+    --text:      #e2e8f0;
+    --muted:     #64748b;
+    --warning:   #f59e0b;
+    --danger:    #f87171;
+    --success:   #22d3a5;
+
+    --font-display: 'DM Serif Display', Georgia, serif;
+    --font-body:    'DM Sans', sans-serif;
+    --font-mono:    'DM Mono', monospace;
+    --radius:    10px;
+    --radius-lg: 18px;
+    --transition: 220ms cubic-bezier(.4,0,.2,1);
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-body);
+    font-size: 16px;
+    line-height: 1.7;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow-x: hidden;
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(var(--border) 1px, transparent 1px),
+      linear-gradient(90deg, var(--border) 1px, transparent 1px);
+    background-size: 48px 48px;
+    opacity: .3;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  body::after {
+    content: '';
+    position: fixed;
+    top: -200px; left: 50%;
+    transform: translateX(-50%);
+    width: 700px; height: 400px;
+    background: radial-gradient(ellipse at center, rgba(59,130,246,.1) 0%, transparent 70%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .wrapper {
+    position: relative;
+    z-index: 1;
+    max-width: 860px;
+    margin: 0 auto;
+    padding: 0 24px;
+    width: 100%;
+    flex: 1;
+  }
+
+  /* ── NAV ── */
+  nav {
+    position: relative;
+    z-index: 2;
+    padding: 20px 24px;
+    max-width: 860px;
+    margin: 0 auto;
+    width: 100%;
+  }
+
+  nav a {
+    font-family: var(--font-mono);
+    font-size: .78rem;
+    letter-spacing: .06em;
+    color: var(--muted);
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: color var(--transition);
+  }
+
+  nav a:hover { color: var(--accent); }
+  nav a::before { content: '←'; }
+
+  /* ── HEADER ── */
+  header {
+    padding: 40px 0 36px;
+    border-bottom: 1px solid var(--border);
+    animation: fadeUp .5s ease both;
+  }
+
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    color: var(--accent);
+    background: rgba(59,130,246,.08);
+    border: 1px solid rgba(59,130,246,.2);
+    border-radius: 100px;
+    padding: 4px 12px;
+    margin-bottom: 18px;
+  }
+
+  header h1 {
+    font-family: var(--font-display);
+    font-size: clamp(1.6rem, 4vw, 2.4rem);
+    font-weight: 400;
+    line-height: 1.2;
+    color: #fff;
+    letter-spacing: -.02em;
+    margin-bottom: 10px;
+  }
+
+  header h1 em { font-style: italic; color: var(--accent); }
+  header p { color: var(--muted); font-size: .95rem; font-weight: 300; max-width: 560px; }
+
+  /* ── TOOL CARD ── */
+  .tool-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 28px;
+    margin: 36px 0;
+    animation: fadeUp .5s .1s ease both;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .tool-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, var(--accent), var(--accent-2));
+  }
+
+  /* ── EDITOR AREA ── */
+  .editor-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 10px;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  .editor-label {
+    font-family: var(--font-mono);
+    font-size: .72rem;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: var(--muted);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .editor-label::before {
+    content: '';
+    display: inline-block;
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--accent);
+  }
+
+  .editor-actions {
+    display: flex;
+    gap: 8px;
+  }
+
+  .btn-small {
+    font-family: var(--font-mono);
+    font-size: .7rem;
+    letter-spacing: .04em;
+    color: var(--muted);
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 4px 12px;
+    cursor: pointer;
+    transition: color var(--transition), border-color var(--transition);
+  }
+
+  .btn-small:hover { color: var(--accent); border-color: rgba(59,130,246,.3); }
+
+  /* textarea editor */
+  .editor-wrap {
+    position: relative;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+    transition: border-color var(--transition), box-shadow var(--transition);
+  }
+
+  .editor-wrap:focus-within {
+    border-color: rgba(59,130,246,.4);
+    box-shadow: 0 0 0 3px rgba(59,130,246,.08);
+  }
+
+  .line-numbers {
+    position: absolute;
+    top: 0; left: 0; bottom: 0;
+    width: 44px;
+    background: var(--surface-2);
+    border-right: 1px solid var(--border);
+    padding: 14px 0;
+    overflow: hidden;
+    pointer-events: none;
+    z-index: 1;
+  }
+
+  .line-numbers span {
+    display: block;
+    height: 22px;
+    line-height: 22px;
+    text-align: right;
+    padding-right: 10px;
+    font-family: var(--font-mono);
+    font-size: .72rem;
+    color: var(--muted);
+    opacity: .5;
+  }
+
+  textarea#codeInput {
+    display: block;
+    width: 100%;
+    min-height: 260px;
+    background: var(--surface-2);
+    border: none;
+    outline: none;
+    padding: 14px 14px 14px 58px;
+    color: var(--text);
+    font-family: var(--font-mono);
+    font-size: .875rem;
+    line-height: 22px;
+    resize: vertical;
+    tab-size: 2;
+    white-space: pre;
+    overflow-x: auto;
+  }
+
+  textarea#codeInput::placeholder { color: var(--muted); opacity: .5; }
+
+  /* char counter */
+  .editor-footer {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 6px;
+  }
+
+  .char-count {
+    font-family: var(--font-mono);
+    font-size: .68rem;
+    color: var(--muted);
+  }
+
+  /* ── OPTIONS ROW ── */
+  .options-row {
+    display: flex;
+    gap: 12px;
+    margin: 16px 0 20px;
+    flex-wrap: wrap;
+  }
+
+  .option-toggle {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    font-size: .825rem;
+    color: var(--muted);
+    transition: color var(--transition);
+    user-select: none;
+  }
+
+  .option-toggle:hover { color: var(--text); }
+
+  .option-toggle input[type="checkbox"] { display: none; }
+
+  .toggle-box {
+    width: 16px; height: 16px;
+    border-radius: 4px;
+    border: 1px solid var(--border-hi);
+    background: var(--surface-2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    color: transparent;
+    transition: background var(--transition), border-color var(--transition), color var(--transition);
+    flex-shrink: 0;
+  }
+
+  .option-toggle input:checked + .toggle-box {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #fff;
+  }
+
+  /* ── BUTTON ── */
+  .btn-run {
+    width: 100%;
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-radius: var(--radius);
+    padding: 14px 24px;
+    font-family: var(--font-mono);
+    font-size: .85rem;
+    font-weight: 500;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: background var(--transition), transform var(--transition), box-shadow var(--transition);
+  }
+
+  .btn-run:hover {
+    background: #5b9ef9;
+    transform: translateY(-1px);
+    box-shadow: 0 8px 24px rgba(59,130,246,.3);
+  }
+
+  .btn-run:active { transform: translateY(0); }
+
+  /* ── RESULTS ── */
+  #result { margin-top: 28px; display: none; animation: fadeUp .4s ease both; }
+  #result.visible { display: block; }
+
+  .divider { height: 1px; background: var(--border); margin: 24px 0; }
+
+  /* summary strip */
+  .summary-strip {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+    margin-bottom: 24px;
+  }
+
+  .summary-pill {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-family: var(--font-mono);
+    font-size: .78rem;
+    border-radius: 100px;
+    padding: 6px 14px;
+  }
+
+  .pill-danger  { background: rgba(248,113,113,.1); border: 1px solid rgba(248,113,113,.25); color: var(--danger); }
+  .pill-warning { background: rgba(245,158,11,.1);  border: 1px solid rgba(245,158,11,.25);  color: var(--warning); }
+  .pill-success { background: rgba(34,211,165,.1);  border: 1px solid rgba(34,211,165,.25);  color: var(--success); }
+  .pill-neutral { background: var(--surface-2);     border: 1px solid var(--border);         color: var(--muted); }
+
+  /* findings */
+  .findings-title {
+    font-family: var(--font-mono);
+    font-size: .7rem;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 12px;
+  }
+
+  .finding-list { display: flex; flex-direction: column; gap: 8px; }
+
+  .finding-card {
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+  }
+
+  .finding-card.sev-high   { border-left: 3px solid var(--danger); }
+  .finding-card.sev-medium { border-left: 3px solid var(--warning); }
+  .finding-card.sev-low    { border-left: 3px solid var(--accent); }
+
+  .finding-top {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 14px 8px;
+    flex-wrap: wrap;
+  }
+
+  .f-line {
+    font-family: var(--font-mono);
+    font-size: .72rem;
+    color: var(--muted);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 2px 8px;
+    flex-shrink: 0;
+  }
+
+  .f-badge {
+    font-family: var(--font-mono);
+    font-size: .62rem;
+    font-weight: 500;
+    letter-spacing: .05em;
+    text-transform: uppercase;
+    border-radius: 4px;
+    padding: 2px 7px;
+    flex-shrink: 0;
+  }
+
+  .sev-high   .f-badge { background: rgba(248,113,113,.15); color: var(--danger); }
+  .sev-medium .f-badge { background: rgba(245,158,11,.15);  color: var(--warning); }
+  .sev-low    .f-badge { background: rgba(59,130,246,.12);  color: var(--accent); }
+
+  .f-pattern {
+    font-family: var(--font-mono);
+    font-size: .8rem;
+    color: var(--text);
+  }
+
+  .finding-code {
+    padding: 0 14px 10px;
+    font-family: var(--font-mono);
+    font-size: .8rem;
+    color: var(--muted);
+    overflow-x: auto;
+    white-space: pre;
+  }
+
+  .finding-code mark {
+    background: rgba(248,113,113,.2);
+    color: var(--danger);
+    border-radius: 2px;
+    padding: 0 2px;
+  }
+
+  .finding-fix {
+    border-top: 1px solid var(--border);
+    padding: 10px 14px;
+    font-size: .8rem;
+    color: var(--muted);
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .finding-fix::before {
+    content: '→';
+    color: var(--success);
+    font-family: var(--font-mono);
+    font-size: .75rem;
+    margin-top: 1px;
+    flex-shrink: 0;
+  }
+
+  .finding-fix code {
+    font-family: var(--font-mono);
+    font-size: .78em;
+    color: var(--success);
+    background: rgba(34,211,165,.08);
+    border-radius: 3px;
+    padding: 1px 5px;
+  }
+
+  /* other issues */
+  .other-list { display: flex; flex-direction: column; gap: 6px; margin-top: 4px; }
+
+  .other-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 11px 14px;
+    font-size: .85rem;
+  }
+
+  .other-item.oi-warning { border-left: 3px solid var(--warning); }
+  .other-item.oi-info    { border-left: 3px solid var(--accent); }
+
+  .oi-icon { font-size: .8rem; flex-shrink: 0; margin-top: 1px; }
+  .oi-text { color: var(--text); line-height: 1.5; }
+  .oi-fix  { font-size: .78rem; color: var(--muted); margin-top: 3px; }
+
+  .all-clear {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: rgba(34,211,165,.06);
+    border: 1px solid rgba(34,211,165,.2);
+    border-radius: var(--radius);
+    padding: 14px 16px;
+    font-size: .875rem;
+    color: var(--success);
+  }
+
+  .all-clear::before { content: '✓'; font-weight: 700; font-size: 1rem; }
+
+  /* ── INFO SECTION ── */
+  .info-section {
+    padding: 40px 0;
+    border-top: 1px solid var(--border);
+    animation: fadeUp .5s .2s ease both;
+  }
+
+  .info-section h2 {
+    font-family: var(--font-display);
+    font-size: 1.4rem;
+    font-weight: 400;
+    color: #fff;
+    margin-bottom: 16px;
+  }
+
+  .info-section p { color: var(--muted); font-size: .9rem; font-weight: 300; margin-bottom: 12px; max-width: 600px; }
+  .info-section ul { list-style: none; display: flex; flex-direction: column; gap: 8px; margin-top: 4px; }
+  .info-section ul li { display: flex; gap: 10px; font-size: .875rem; color: var(--text); }
+  .info-section ul li::before { content: '→'; color: var(--accent); font-family: var(--font-mono); font-size: .75rem; margin-top: 4px; flex-shrink: 0; }
+
+  /* ── FOOTER ── */
+  footer {
+    position: relative; z-index: 1;
+    border-top: 1px solid var(--border);
+    padding: 28px 24px;
+    max-width: 860px;
+    margin: 0 auto;
+    width: 100%;
+  }
+
+  footer p { font-size: .8rem; color: var(--muted); font-weight: 300; }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(14px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  @media (max-width: 480px) {
+    .tool-card { padding: 18px; }
+    textarea#codeInput { padding-left: 14px; }
+    .line-numbers { display: none; }
+  }
+</style>
+
 </head>
 <body>
-<div class="container">
-<h2>Typescript Any Type Detector</h2>
 
-<textarea id="input" placeholder="Paste JS/TS code..."></textarea>
+<nav class="wrapper">
+  <a href="/ts_migration_tools/">TypeScript Migration Tools</a>
+</nav>
 
-<button onclick="analyze()">Run Tool</button>
+<div class="wrapper">
 
-<div id="result"></div>
+  <header>
+    <div class="badge">Any Type Detector</div>
+    <h1>TypeScript <em>any</em> Type Detector</h1>
+    <p>Paste your TypeScript or JavaScript code. The detector scans every line for <code style="font-family:var(--font-mono);font-size:.85em;color:var(--accent-2);background:rgba(129,140,248,.1);border-radius:4px;padding:1px 6px">any</code> usage, loose patterns, and migration risks — with line numbers, severity, and fix suggestions.</p>
+  </header>
+
+  <div class="tool-card">
+
+```
+<div class="editor-header">
+  <span class="editor-label">Code Input</span>
+  <div class="editor-actions">
+    <button class="btn-small" onclick="loadSample()">Load Sample</button>
+    <button class="btn-small" onclick="clearInput()">Clear</button>
+  </div>
 </div>
 
-<script src="script.js"></script>
+<div class="editor-wrap">
+  <div class="line-numbers" id="lineNumbers"></div>
+  <textarea id="codeInput"
+    placeholder="// Paste your TypeScript or JavaScript code here…
+```
+
+function fetchData(url: any): any {
+const result: any = {};
+return result;
+}”
+oninput=“updateLineNumbers(); updateCharCount();”
+onkeydown=“handleTab(event)”
+></textarea>
+</div>
+
+```
+<div class="editor-footer">
+  <span class="char-count" id="charCount">0 chars · 0 lines</span>
+</div>
+
+<div class="options-row">
+  <label class="option-toggle">
+    <input type="checkbox" id="opt_var" checked>
+    <span class="toggle-box">✓</span>
+    Detect <code style="font-family:var(--font-mono);font-size:.8em;color:var(--accent-2)">var</code> usage
+  </label>
+  <label class="option-toggle">
+    <input type="checkbox" id="opt_loose" checked>
+    <span class="toggle-box">✓</span>
+    Detect loose equality (<code style="font-family:var(--font-mono);font-size:.8em;color:var(--accent-2)">==</code>)
+  </label>
+  <label class="option-toggle">
+    <input type="checkbox" id="opt_implicit" checked>
+    <span class="toggle-box">✓</span>
+    Detect implicit returns
+  </label>
+  <label class="option-toggle">
+    <input type="checkbox" id="opt_size" checked>
+    <span class="toggle-box">✓</span>
+    File size warnings
+  </label>
+</div>
+
+<button class="btn-run" onclick="analyze()">Detect any Types & Issues</button>
+
+<div id="result"></div>
+```
+
+  </div>
+
+  <div class="info-section">
+    <h2>What This Tool Detects</h2>
+    <p>The detector scans your code for patterns that weaken TypeScript's type system and increase migration risk.</p>
+    <ul>
+      <li>Explicit <code style="font-family:var(--font-mono);font-size:.82em;color:var(--accent-2)">any</code> type annotations in function params, return types, and variable declarations</li>
+      <li>Implicit <code style="font-family:var(--font-mono);font-size:.82em;color:var(--accent-2)">any</code> from untyped function arguments and missing return types</li>
+      <li>Legacy <code style="font-family:var(--font-mono);font-size:.82em;color:var(--accent-2)">var</code> declarations that should be migrated to <code style="font-family:var(--font-mono);font-size:.82em;color:var(--accent-2)">const</code> / <code style="font-family:var(--font-mono);font-size:.82em;color:var(--accent-2)">let</code></li>
+      <li>Loose equality operators (<code style="font-family:var(--font-mono);font-size:.82em;color:var(--accent-2)">==</code> / <code style="font-family:var(--font-mono);font-size:.82em;color:var(--accent-2)">!=</code>) that bypass type coercion safety</li>
+      <li>Type assertions using <code style="font-family:var(--font-mono);font-size:.82em;color:var(--accent-2)">as any</code> that silently bypass type checking</li>
+      <li>Functions with missing return type annotations</li>
+    </ul>
+  </div>
+
+</div>
+
+<footer class="wrapper">
+  <p>TypeScript Migration Tools — Any Type Detector</p>
+</footer>
+
+<script>
+  // ── Line numbers ───────────────────────────────────────
+  function updateLineNumbers() {
+    const ta    = document.getElementById('codeInput');
+    const lines = ta.value.split('\n');
+    const nums  = document.getElementById('lineNumbers');
+    nums.innerHTML = lines.map((_, i) => `<span>${i + 1}</span>`).join('');
+  }
+
+  function updateCharCount() {
+    const ta  = document.getElementById('codeInput');
+    const lines = ta.value.split('\n').length;
+    document.getElementById('charCount').textContent =
+      `${ta.value.length} chars · ${lines} lines`;
+  }
+
+  function handleTab(e) {
+    if (e.key !== 'Tab') return;
+    e.preventDefault();
+    const ta = document.getElementById('codeInput');
+    const s = ta.selectionStart, end = ta.selectionEnd;
+    ta.value = ta.value.substring(0, s) + '  ' + ta.value.substring(end);
+    ta.selectionStart = ta.selectionEnd = s + 2;
+    updateLineNumbers();
+  }
+
+  function clearInput() {
+    document.getElementById('codeInput').value = '';
+    document.getElementById('result').classList.remove('visible');
+    updateLineNumbers();
+    updateCharCount();
+  }
+
+  function loadSample() {
+    document.getElementById('codeInput').value =
+`// Sample: TypeScript file with migration issues
+var userId = 123;
+var userName: any = "Alice";
+
+function fetchUser(id: any): any {
+  const data: any = {};
+  return data;
+}
+
+function processItems(items) {
+  items.forEach(item => {
+    if (item.status == "active") {
+      console.log(item);
+    }
+  });
+}
+
+const handler = (event: any) => {
+  const target = event.target as any;
+  return target.value;
+};
+
+class ApiService {
+  private response: any;
+
+  getData(endpoint: any): any {
+    return fetch(endpoint).then(r => r.json());
+  }
+}`;
+    updateLineNumbers();
+    updateCharCount();
+  }
+
+  // ── Detection patterns ────────────────────────────────
+  const PATTERNS = [
+    {
+      id: 'explicit_any_param',
+      regex: /(\w+)\s*:\s*any(?!\w)/g,
+      severity: 'high',
+      label: 'Explicit any — typed parameter/variable',
+      fix: (m) => `Replace \`any\` with a specific type. If the shape is unknown, use \`unknown\` instead and narrow with a type guard.`,
+    },
+    {
+      id: 'as_any',
+      regex: /as\s+any(?!\w)/g,
+      severity: 'high',
+      label: 'Type assertion — as any',
+      fix: () => `Avoid \`as any\`. Use \`as unknown as TargetType\` or add a proper type guard to narrow safely.`,
+    },
+    {
+      id: 'return_any',
+      regex: /\)\s*:\s*any(?!\w)/g,
+      severity: 'high',
+      label: 'Return type — : any',
+      fix: () => `Define the actual return type. If dynamic, use a union type or generic to preserve type information downstream.`,
+    },
+    {
+      id: 'var_decl',
+      regex: /\bvar\s+\w+/g,
+      severity: 'medium',
+      label: 'Legacy var declaration',
+      fix: (m) => {
+        const name = m.replace('var', '').trim();
+        return `Replace \`var ${name}\` with \`const\` (if not reassigned) or \`let\` (if reassigned). Avoids hoisting and scoping bugs.`;
+      },
+    },
+    {
+      id: 'loose_eq',
+      regex: /[^=!]={2}(?!=)[^>]/g,
+      severity: 'medium',
+      label: 'Loose equality == (non-strict)',
+      fix: () => `Replace \`==\` with \`===\`. Strict equality avoids implicit type coercion and is required by most TypeScript linting rules.`,
+    },
+    {
+      id: 'loose_neq',
+      regex: /!={1}(?!=)/g,
+      severity: 'medium',
+      label: 'Loose inequality != (non-strict)',
+      fix: () => `Replace \`!=\` with \`!==\` for strict inequality. Prevents unexpected coercion comparisons.`,
+    },
+    {
+      id: 'untyped_fn',
+      regex: /function\s+\w+\s*\([^)]*\)\s*\{/g,
+      severity: 'low',
+      label: 'Function missing return type annotation',
+      fix: (m) => `Add an explicit return type: \`${m.replace('{', ': ReturnType {')}\`. Explicit return types prevent accidental \`any\` propagation.`,
+    },
+    {
+      id: 'untyped_arrow',
+      regex: /(?:const|let)\s+\w+\s*=\s*\([^)]*\)\s*=>/g,
+      severity: 'low',
+      label: 'Arrow function missing return type',
+      fix: () => `Add a return type annotation: \`const fn = (arg: Type): ReturnType => ...\``,
+    },
+  ];
+
+  // ── Highlight any in a line ───────────────────────────
+  function highlightLine(line, pattern) {
+    return line.replace(pattern.regex, m => `<mark>${m}</mark>`);
+  }
+
+  // ── Main analysis ─────────────────────────────────────
+  function analyze() {
+    const code  = document.getElementById('codeInput').value;
+    const lines = code.split('\n');
+
+    if (!code.trim()) {
+      alert('Please paste some TypeScript or JavaScript code first.');
+      return;
+    }
+
+    const optVar      = document.getElementById('opt_var').checked;
+    const optLoose    = document.getElementById('opt_loose').checked;
+    const optImplicit = document.getElementById('opt_implicit').checked;
+    const optSize     = document.getElementById('opt_size').checked;
+
+    // Which patterns to run
+    const activePatterns = PATTERNS.filter(p => {
+      if (!optVar    && p.id === 'var_decl')    return false;
+      if (!optLoose  && (p.id === 'loose_eq' || p.id === 'loose_neq')) return false;
+      if (!optImplicit && (p.id === 'untyped_fn' || p.id === 'untyped_arrow')) return false;
+      return true;
+    });
+
+    // Collect findings per line
+    const findings = [];
+
+    lines.forEach((line, idx) => {
+      // skip comment lines
+      const trimmed = line.trim();
+      if (trimmed.startsWith('//') || trimmed.startsWith('*') || trimmed.startsWith('/*')) return;
+
+      activePatterns.forEach(pat => {
+        // reset regex
+        pat.regex.lastIndex = 0;
+        let match;
+        while ((match = pat.regex.exec(line)) !== null) {
+          findings.push({
+            line:     idx + 1,
+            pattern:  pat,
+            matched:  match[0].trim(),
+            context:  line.trim(),
+            fix:      pat.fix(match[0].trim()),
+          });
+          // avoid infinite loop on zero-length matches
+          if (match[0].length === 0) { pat.regex.lastIndex++; }
+        }
+      });
+    });
+
+    // Extra: large file warning
+    const extraIssues = [];
+    if (optSize && lines.length > 200) {
+      extraIssues.push({
+        cls: 'oi-warning',
+        icon: '⚠',
+        text: `Large file detected (${lines.length} lines).`,
+        fix: 'Files over 200 lines are harder to migrate safely. Consider splitting into smaller modules before migrating.',
+      });
+    }
+    if (optSize && lines.length > 400) {
+      extraIssues.push({
+        cls: 'oi-warning',
+        icon: '⚠',
+        text: `Very large file (${lines.length} lines) — high migration risk.`,
+        fix: 'Extract logical sections into separate files. Migrate one module at a time.',
+      });
+    }
+
+    // Counts
+    const highCount   = findings.filter(f => f.pattern.severity === 'high').length;
+    const mediumCount = findings.filter(f => f.pattern.severity === 'medium').length;
+    const lowCount    = findings.filter(f => f.pattern.severity === 'low').length;
+    const anyCount    = findings.filter(f => f.pattern.id.includes('any') || f.pattern.id === 'as_any' || f.pattern.id === 'return_any').length;
+
+    // Summary pills
+    const summaryHTML = `
+      <div class="summary-strip">
+        ${anyCount    ? `<div class="summary-pill pill-danger">${anyCount} any usage${anyCount !== 1 ? 's' : ''}</div>` : ''}
+        ${highCount   ? `<div class="summary-pill pill-danger">${highCount} critical</div>` : ''}
+        ${mediumCount ? `<div class="summary-pill pill-warning">${mediumCount} warning${mediumCount !== 1 ? 's' : ''}</div>` : ''}
+        ${lowCount    ? `<div class="summary-pill pill-neutral">${lowCount} info</div>` : ''}
+        ${findings.length === 0 && extraIssues.length === 0
+            ? `<div class="summary-pill pill-success">✓ No issues found</div>` : ''}
+        <div class="summary-pill pill-neutral">${lines.length} lines scanned</div>
+      </div>
+    `;
+
+    // Findings cards
+    let findingsHTML = '';
+    if (findings.length > 0) {
+      findingsHTML = `
+        <p class="findings-title">Detected Issues — sorted by severity</p>
+        <div class="finding-list">
+          ${[...findings]
+              .sort((a, b) => {
+                const order = { high: 0, medium: 1, low: 2 };
+                return order[a.pattern.severity] - order[b.pattern.severity];
+              })
+              .map(f => `
+                <div class="finding-card sev-${f.pattern.severity}">
+                  <div class="finding-top">
+                    <span class="f-line">Line ${f.line}</span>
+                    <span class="f-badge">${f.pattern.severity}</span>
+                    <span class="f-pattern">${f.pattern.label}</span>
+                  </div>
+                  <div class="finding-code">${escapeHtml(f.context).replace(
+                    escapeHtml(f.matched),
+                    `<mark>${escapeHtml(f.matched)}</mark>`
+                  )}</div>
+                  <div class="finding-fix">${f.fix}</div>
+                </div>
+              `).join('')}
+        </div>
+      `;
+    }
+
+    // Extra issues
+    let extraHTML = '';
+    if (extraIssues.length > 0) {
+      extraHTML = `
+        <div class="divider"></div>
+        <p class="findings-title">Additional Warnings</p>
+        <div class="other-list">
+          ${extraIssues.map(i => `
+            <div class="other-item ${i.cls}">
+              <span class="oi-icon">${i.icon}</span>
+              <div>
+                <div class="oi-text">${i.text}</div>
+                <div class="oi-fix">${i.fix}</div>
+              </div>
+            </div>
+          `).join('')}
+        </div>
+      `;
+    }
+
+    // All clear
+    const allClearHTML = (findings.length === 0 && extraIssues.length === 0)
+      ? `<div class="all-clear">No any types or migration issues detected in this code.</div>`
+      : '';
+
+    const resultEl = document.getElementById('result');
+    resultEl.innerHTML = `
+      <div class="divider"></div>
+      ${summaryHTML}
+      ${findingsHTML}
+      ${extraHTML}
+      ${allClearHTML}
+    `;
+
+    resultEl.classList.add('visible');
+    resultEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+
+  function escapeHtml(str) {
+    return str
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+
+  // Init
+  updateLineNumbers();
+  updateCharCount();
+</script>
+
 </body>
 </html>
