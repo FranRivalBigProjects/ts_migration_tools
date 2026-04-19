@@ -1,21 +1,1080 @@
 <!DOCTYPE html>
-<html>
+
+<html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>typescript_legacy_code_analyzer</title>
-<link rel="stylesheet" href="styles.css">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TypeScript Legacy Code Analyzer – Assess Migration Complexity & Technical Debt</title>
+<meta name="description" content="Analyze legacy JavaScript or TypeScript codebases for migration complexity, technical debt, and risk. Get a health score, complexity metrics, and a prioritized migration roadmap.">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Mono:wght@400;500&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&display=swap" rel="stylesheet">
+
+<style>
+  :root {
+    --bg:        #0c0e14;
+    --surface:   #12151e;
+    --surface-2: #171b26;
+    --border:    #1e2333;
+    --border-hi: #2c3450;
+    --accent:    #3b82f6;
+    --accent-2:  #818cf8;
+    --text:      #e2e8f0;
+    --muted:     #64748b;
+    --warning:   #f59e0b;
+    --danger:    #f87171;
+    --success:   #22d3a5;
+
+    --font-display: 'DM Serif Display', Georgia, serif;
+    --font-body:    'DM Sans', sans-serif;
+    --font-mono:    'DM Mono', monospace;
+    --radius:    10px;
+    --radius-lg: 18px;
+    --transition: 220ms cubic-bezier(.4,0,.2,1);
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-body);
+    font-size: 16px;
+    line-height: 1.7;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow-x: hidden;
+  }
+
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background-image:
+      linear-gradient(var(--border) 1px, transparent 1px),
+      linear-gradient(90deg, var(--border) 1px, transparent 1px);
+    background-size: 48px 48px;
+    opacity: .3;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  body::after {
+    content: '';
+    position: fixed;
+    top: -200px; left: 50%;
+    transform: translateX(-50%);
+    width: 700px; height: 400px;
+    background: radial-gradient(ellipse at center, rgba(59,130,246,.1) 0%, transparent 70%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .wrapper {
+    position: relative; z-index: 1;
+    max-width: 860px;
+    margin: 0 auto;
+    padding: 0 24px;
+    width: 100%;
+    flex: 1;
+  }
+
+  nav {
+    position: relative; z-index: 2;
+    padding: 20px 24px;
+    max-width: 860px;
+    margin: 0 auto;
+    width: 100%;
+  }
+
+  nav a {
+    font-family: var(--font-mono);
+    font-size: .78rem;
+    letter-spacing: .06em;
+    color: var(--muted);
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: color var(--transition);
+  }
+
+  nav a:hover { color: var(--accent); }
+  nav a::before { content: '←'; }
+
+  header {
+    padding: 40px 0 36px;
+    border-bottom: 1px solid var(--border);
+    animation: fadeUp .5s ease both;
+  }
+
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    color: var(--accent);
+    background: rgba(59,130,246,.08);
+    border: 1px solid rgba(59,130,246,.2);
+    border-radius: 100px;
+    padding: 4px 12px;
+    margin-bottom: 18px;
+  }
+
+  header h1 {
+    font-family: var(--font-display);
+    font-size: clamp(1.6rem, 4vw, 2.4rem);
+    font-weight: 400;
+    line-height: 1.2;
+    color: #fff;
+    letter-spacing: -.02em;
+    margin-bottom: 10px;
+  }
+
+  header h1 em { font-style: italic; color: var(--accent); }
+  header p { color: var(--muted); font-size: .95rem; font-weight: 300; max-width: 580px; }
+
+  /* ── TOOL CARD ── */
+  .tool-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 28px;
+    margin: 36px 0;
+    animation: fadeUp .5s .1s ease both;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .tool-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, var(--accent), var(--accent-2));
+  }
+
+  .editor-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 10px;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  .editor-label {
+    font-family: var(--font-mono);
+    font-size: .72rem;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: var(--muted);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .editor-label::before {
+    content: '';
+    display: inline-block;
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--warning);
+  }
+
+  .btn-small {
+    font-family: var(--font-mono);
+    font-size: .7rem;
+    color: var(--muted);
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 4px 12px;
+    cursor: pointer;
+    transition: color var(--transition), border-color var(--transition);
+  }
+
+  .btn-small:hover { color: var(--accent); border-color: rgba(59,130,246,.3); }
+
+  .editor-wrap {
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+    transition: border-color var(--transition), box-shadow var(--transition);
+    margin-bottom: 16px;
+  }
+
+  .editor-wrap:focus-within {
+    border-color: rgba(59,130,246,.4);
+    box-shadow: 0 0 0 3px rgba(59,130,246,.08);
+  }
+
+  textarea {
+    display: block;
+    width: 100%;
+    min-height: 280px;
+    background: var(--surface-2);
+    border: none;
+    outline: none;
+    padding: 14px;
+    color: var(--text);
+    font-family: var(--font-mono);
+    font-size: .85rem;
+    line-height: 1.65;
+    resize: vertical;
+    tab-size: 2;
+  }
+
+  textarea::placeholder { color: var(--muted); opacity: .5; }
+
+  .char-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    font-family: var(--font-mono);
+    font-size: .68rem;
+    color: var(--muted);
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .btn-run {
+    width: 100%;
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-radius: var(--radius);
+    padding: 14px 24px;
+    font-family: var(--font-mono);
+    font-size: .85rem;
+    font-weight: 500;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: background var(--transition), transform var(--transition), box-shadow var(--transition);
+  }
+
+  .btn-run:hover {
+    background: #5b9ef9;
+    transform: translateY(-1px);
+    box-shadow: 0 8px 24px rgba(59,130,246,.3);
+  }
+
+  .btn-run:active { transform: translateY(0); }
+
+  /* ── RESULT ── */
+  #result { margin-top: 28px; display: none; animation: fadeUp .4s ease both; }
+  #result.visible { display: block; }
+
+  .divider { height: 1px; background: var(--border); margin: 24px 0; }
+
+  /* health score */
+  .health-row {
+    display: flex;
+    align-items: center;
+    gap: 24px;
+    margin-bottom: 28px;
+    flex-wrap: wrap;
+  }
+
+  .health-ring {
+    position: relative;
+    width: 100px; height: 100px;
+    flex-shrink: 0;
+  }
+
+  .health-ring svg {
+    width: 100%; height: 100%;
+    transform: rotate(-90deg);
+  }
+
+  .health-ring circle {
+    fill: none;
+    stroke-width: 8;
+    stroke-linecap: round;
+  }
+
+  .ring-bg   { stroke: var(--border); }
+  .ring-fill { transition: stroke-dashoffset .8s cubic-bezier(.4,0,.2,1); }
+
+  .ring-label {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0;
+  }
+
+  .ring-score {
+    font-family: var(--font-display);
+    font-size: 1.6rem;
+    line-height: 1;
+    color: #fff;
+  }
+
+  .ring-sub {
+    font-family: var(--font-mono);
+    font-size: .6rem;
+    color: var(--muted);
+    letter-spacing: .04em;
+  }
+
+  .health-meta { flex: 1; }
+
+  .health-title {
+    font-family: var(--font-display);
+    font-size: 1.4rem;
+    color: #fff;
+    margin-bottom: 6px;
+  }
+
+  .health-desc { font-size: .875rem; color: var(--muted); font-weight: 300; max-width: 480px; }
+
+  .risk-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-family: var(--font-mono);
+    font-size: .75rem;
+    font-weight: 500;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    border-radius: 100px;
+    padding: 5px 14px;
+    margin-top: 10px;
+  }
+
+  .risk-low    { color: var(--success); background: rgba(34,211,165,.08);  border: 1px solid rgba(34,211,165,.2); }
+  .risk-medium { color: var(--warning); background: rgba(245,158,11,.08);  border: 1px solid rgba(245,158,11,.2); }
+  .risk-high   { color: var(--danger);  background: rgba(248,113,113,.08); border: 1px solid rgba(248,113,113,.2); }
+
+  /* metrics grid */
+  .metrics-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 10px;
+    margin-bottom: 24px;
+  }
+
+  .metric-card {
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .mc-label {
+    font-family: var(--font-mono);
+    font-size: .64rem;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  .mc-value {
+    font-family: var(--font-display);
+    font-size: 1.7rem;
+    line-height: 1;
+    color: #fff;
+  }
+
+  .mc-sub { font-size: .72rem; color: var(--muted); font-weight: 300; }
+
+  .mc-bar {
+    height: 3px;
+    background: var(--border);
+    border-radius: 2px;
+    margin-top: 6px;
+    overflow: hidden;
+  }
+
+  .mc-bar-fill {
+    height: 100%;
+    border-radius: 2px;
+    transition: width .6s cubic-bezier(.4,0,.2,1);
+  }
+
+  .fill-good    { background: linear-gradient(90deg, #15b89e, var(--success)); }
+  .fill-warning { background: linear-gradient(90deg, #c08000, var(--warning)); }
+  .fill-bad     { background: linear-gradient(90deg, #cc2020, var(--danger)); }
+
+  /* category breakdown */
+  .breakdown-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 24px; }
+
+  .breakdown-row {
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .breakdown-row.cat-critical { border-left: 3px solid var(--danger); }
+  .breakdown-row.cat-high     { border-left: 3px solid var(--warning); }
+  .breakdown-row.cat-medium   { border-left: 3px solid var(--accent); }
+  .breakdown-row.cat-low      { border-left: 3px solid var(--success); }
+
+  .brow-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  .brow-label {
+    font-size: .875rem;
+    font-weight: 500;
+    color: var(--text);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .brow-count {
+    font-family: var(--font-mono);
+    font-size: .72rem;
+    color: var(--muted);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 2px 8px;
+  }
+
+  .brow-items {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .brow-tag {
+    font-family: var(--font-mono);
+    font-size: .7rem;
+    color: var(--muted);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 2px 8px;
+  }
+
+  .brow-fix {
+    font-size: .8rem;
+    color: var(--muted);
+    font-weight: 300;
+    line-height: 1.5;
+    border-top: 1px solid var(--border);
+    padding-top: 8px;
+    display: flex;
+    gap: 8px;
+  }
+
+  .brow-fix::before { content: '→'; color: var(--success); font-family: var(--font-mono); flex-shrink: 0; }
+
+  /* roadmap */
+  .roadmap-title {
+    font-family: var(--font-mono);
+    font-size: .7rem;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 12px;
+  }
+
+  .roadmap { display: flex; flex-direction: column; gap: 0; position: relative; }
+
+  .roadmap::before {
+    content: '';
+    position: absolute;
+    left: 15px; top: 0; bottom: 0;
+    width: 1px;
+    background: var(--border);
+    z-index: 0;
+  }
+
+  .roadmap-step {
+    display: flex;
+    gap: 16px;
+    align-items: flex-start;
+    padding: 0 0 16px;
+    position: relative;
+    z-index: 1;
+  }
+
+  .roadmap-step:last-child { padding-bottom: 0; }
+
+  .step-dot {
+    width: 30px; height: 30px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--font-mono);
+    font-size: .72rem;
+    font-weight: 500;
+    flex-shrink: 0;
+    position: relative;
+    z-index: 1;
+  }
+
+  .step-1 { background: rgba(248,113,113,.15); border: 1px solid rgba(248,113,113,.3); color: var(--danger); }
+  .step-2 { background: rgba(245,158,11,.15);  border: 1px solid rgba(245,158,11,.3);  color: var(--warning); }
+  .step-3 { background: rgba(59,130,246,.12);  border: 1px solid rgba(59,130,246,.3);  color: var(--accent); }
+  .step-4 { background: rgba(34,211,165,.1);   border: 1px solid rgba(34,211,165,.3);  color: var(--success); }
+
+  .step-body { flex: 1; padding-top: 4px; }
+
+  .step-title {
+    font-size: .875rem;
+    font-weight: 500;
+    color: var(--text);
+    margin-bottom: 3px;
+  }
+
+  .step-desc { font-size: .8rem; color: var(--muted); font-weight: 300; line-height: 1.5; }
+
+  /* ── INFO ── */
+  .info-section {
+    padding: 40px 0;
+    border-top: 1px solid var(--border);
+    animation: fadeUp .5s .2s ease both;
+  }
+
+  .info-section h2 {
+    font-family: var(--font-display);
+    font-size: 1.4rem;
+    font-weight: 400;
+    color: #fff;
+    margin-bottom: 16px;
+  }
+
+  .info-section p { color: var(--muted); font-size: .9rem; font-weight: 300; margin-bottom: 12px; max-width: 600px; }
+  .info-section ul { list-style: none; display: flex; flex-direction: column; gap: 8px; margin-top: 4px; }
+  .info-section ul li { display: flex; gap: 10px; font-size: .875rem; color: var(--text); }
+  .info-section ul li::before { content: '→'; color: var(--accent); font-family: var(--font-mono); font-size: .75rem; margin-top: 4px; flex-shrink: 0; }
+
+  footer {
+    position: relative; z-index: 1;
+    border-top: 1px solid var(--border);
+    padding: 28px 24px;
+    max-width: 860px;
+    margin: 0 auto;
+    width: 100%;
+  }
+
+  footer p { font-size: .8rem; color: var(--muted); font-weight: 300; }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(14px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  @media (max-width: 480px) {
+    .tool-card { padding: 18px; }
+    .metrics-grid { grid-template-columns: 1fr 1fr; }
+    .health-ring { width: 80px; height: 80px; }
+    .ring-score { font-size: 1.3rem; }
+  }
+</style>
+
 </head>
 <body>
-<div class="container">
-<h2>Typescript Legacy Code Analyzer</h2>
 
-<textarea id="input" placeholder="Paste JS/TS code..."></textarea>
+<nav class="wrapper">
+  <a href="/ts_migration_tools/">TypeScript Migration Tools</a>
+</nav>
 
-<button onclick="analyze()">Run Tool</button>
+<div class="wrapper">
 
-<div id="result"></div>
+  <header>
+    <div class="badge">Legacy Analyzer</div>
+    <h1>Legacy Code <em>Analyzer</em></h1>
+    <p>Paste your JavaScript or TypeScript code and get a complete health report: complexity score, technical debt breakdown, migration risk level, and a step-by-step migration roadmap.</p>
+  </header>
+
+  <div class="tool-card">
+
+```
+<div class="editor-header">
+  <span class="editor-label">Code Input</span>
+  <div style="display:flex;gap:8px">
+    <button class="btn-small" onclick="loadSample()">Load Sample</button>
+    <button class="btn-small" onclick="document.getElementById('codeInput').value=''; updateMeta()">Clear</button>
+  </div>
 </div>
 
-<script src="script.js"></script>
+<div class="editor-wrap">
+  <textarea id="codeInput"
+    placeholder="// Paste your legacy JavaScript or TypeScript code here…"
+    oninput="updateMeta()"
+  ></textarea>
+</div>
+
+<div class="char-row">
+  <span id="metaInfo">0 lines · 0 chars</span>
+  <span id="complexityHint"></span>
+</div>
+
+<button class="btn-run" onclick="analyze()">Analyze Legacy Code</button>
+
+<div id="result"></div>
+```
+
+  </div>
+
+  <div class="info-section">
+    <h2>What the Analyzer Measures</h2>
+    <p>The analyzer scans your code across six dimensions to produce a migration health score and risk assessment.</p>
+    <ul>
+      <li>Type safety — any usage, missing annotations, implicit returns</li>
+      <li>Declaration quality — var count, reassignment patterns, scoping issues</li>
+      <li>Code complexity — function count, nesting depth, file size</li>
+      <li>API patterns — CommonJS require, fetch/HTTP calls, class structure</li>
+      <li>Equality safety — loose == / != operators throughout the code</li>
+      <li>ES version indicators — older patterns that conflict with strict TS</li>
+    </ul>
+  </div>
+
+</div>
+
+<footer class="wrapper">
+  <p>TypeScript Migration Tools — Legacy Code Analyzer</p>
+</footer>
+
+<script>
+  // ── Meta update ───────────────────────────────────────
+  function updateMeta() {
+    const code  = document.getElementById('codeInput').value;
+    const lines = code.split('\n').length;
+    document.getElementById('metaInfo').textContent =
+      `${lines} lines · ${code.length} chars`;
+
+    // live complexity hint
+    const hint = document.getElementById('complexityHint');
+    if (code.length === 0) { hint.textContent = ''; return; }
+    const fns = (code.match(/\bfunction\b/g) || []).length +
+                (code.match(/=>/g) || []).length;
+    hint.textContent = `~${fns} function${fns !== 1 ? 's' : ''} detected`;
+  }
+
+  // ── Sample ────────────────────────────────────────────
+  function loadSample() {
+    document.getElementById('codeInput').value =
+`// Legacy user management module
+var DB_URL = "mongodb://localhost/app";
+var MAX_RETRY = 3;
+var retries = 0;
+
+var UserService = function(config) {
+  this.config = config;
+  this.db = null;
+  this.cache = {};
+  this.users = [];
+};
+
+UserService.prototype.connect = function() {
+  var self = this;
+  var url = DB_URL + "/" + self.config.dbName;
+  return fetch(url).then(function(res) {
+    if (res.status == 200) {
+      self.db = res;
+      return self.db;
+    }
+  });
+};
+
+UserService.prototype.getUser = function(id, callback) {
+  var cached = this.cache[id];
+  if (cached != null) {
+    callback(null, cached);
+    return;
+  }
+  var users = this.users;
+  for (var i = 0; i < users.length; i++) {
+    if (users[i].id == id) {
+      this.cache[id] = users[i];
+      callback(null, users[i]);
+      return;
+    }
+  }
+  callback(new Error("User not found"), null);
+};
+
+function processUserData(data) {
+  var result = [];
+  if (data == null || data == undefined) return [];
+  for (var i = 0; i < data.length; i++) {
+    var user = data[i];
+    if (user.active == true && user.role != "banned") {
+      var processed = {
+        id: user.id,
+        name: user.firstName + " " + user.lastName,
+        email: user.email
+      };
+      result.push(processed);
+    }
+  }
+  return result;
+}
+
+function validateEmail(email) {
+  var re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  return re.test(email);
+}
+
+var sendNotification = function(userId, message, type) {
+  var payload = {
+    userId: userId,
+    message: message,
+    type: type || "info",
+    timestamp: new Date()
+  };
+  return fetch("/api/notify", {
+    method: "POST",
+    body: JSON.stringify(payload)
+  });
+};
+
+module.exports = { UserService, processUserData, validateEmail };`;
+    updateMeta();
+  }
+
+  // ── Metrics ───────────────────────────────────────────
+  function countMatches(code, regex) {
+    return (code.match(regex) || []).length;
+  }
+
+  function maxNestingDepth(code) {
+    let depth = 0, max = 0;
+    for (const ch of code) {
+      if (ch === '{') { depth++; if (depth > max) max = depth; }
+      if (ch === '}') depth = Math.max(0, depth - 1);
+    }
+    return max;
+  }
+
+  function fillClass(score) {
+    if (score >= 65) return 'fill-good';
+    if (score >= 35) return 'fill-warning';
+    return 'fill-bad';
+  }
+
+  // ── Main analysis ─────────────────────────────────────
+  function analyze() {
+    const code = document.getElementById('codeInput').value;
+    if (!code.trim()) { alert('Please paste some code first.'); return; }
+
+    const lines = code.split('\n');
+    const loc   = lines.length;
+
+    // ── Raw counts ──
+    const varCount      = countMatches(code, /\bvar\b/g);
+    const anyCount      = countMatches(code, /:\s*any\b/g) + countMatches(code, /as\s+any\b/g);
+    const looseEq       = countMatches(code, /[^=!<>]={2}(?!=)/g) + countMatches(code, /!={1}(?!=)/g);
+    const fnCount       = countMatches(code, /\bfunction\b/g);
+    const arrowCount    = countMatches(code, /=>\s*[{(]/g);
+    const classCount    = countMatches(code, /\bclass\b/g);
+    const requireCount  = countMatches(code, /\brequire\s*\(/g);
+    const fetchCount    = countMatches(code, /\bfetch\s*\(/g);
+    const callbackCount = countMatches(code, /\bcallback\b/g);
+    const protoCount    = countMatches(code, /\.prototype\./g);
+    const asyncCount    = countMatches(code, /\basync\b/g);
+    const promiseCount  = countMatches(code, /\bnew\s+Promise\b/g);
+    const nestDepth     = maxNestingDepth(code);
+
+    // Untyped function params
+    const untypedFnParams = countMatches(code, /function\s+\w*\s*\([^)]*\)/g);
+    const typedFnParams   = countMatches(code, /function\s+\w*\s*\([^)]*:\s*\w+[^)]*\)/g);
+    const untypedRatio    = untypedFnParams > 0
+      ? Math.round(((untypedFnParams - typedFnParams) / untypedFnParams) * 100)
+      : 0;
+
+    // ── Category scores (0–100, higher = healthier) ──
+
+    // 1. Type safety (penalize any, untyped params)
+    const typeSafeScore = Math.max(0,
+      100
+      - anyCount * 12
+      - untypedRatio * 0.4
+    );
+
+    // 2. Declaration quality (penalize var)
+    const totalDecls = varCount + countMatches(code, /\b(const|let)\b/g);
+    const varRatio   = totalDecls > 0 ? varCount / totalDecls : 0;
+    const declScore  = Math.max(0, Math.round(100 - varRatio * 100));
+
+    // 3. Code complexity (nesting, size, fn count)
+    const complexityPenalty =
+      (nestDepth > 6 ? (nestDepth - 6) * 10 : 0) +
+      (loc > 300 ? Math.floor((loc - 300) / 50) * 8 : 0) +
+      (fnCount > 15 ? (fnCount - 15) * 4 : 0);
+    const complexityScore = Math.max(0, 100 - complexityPenalty);
+
+    // 4. API modernity (penalize CommonJS, prototype, callbacks)
+    const modernityPenalty =
+      requireCount * 8 +
+      protoCount   * 6 +
+      callbackCount * 4;
+    const modernityScore = Math.max(0, 100 - modernityPenalty);
+
+    // 5. Equality safety
+    const totalComparisons = Math.max(looseEq + 5, 5);
+    const equalityScore = Math.max(0, Math.round(100 - (looseEq / totalComparisons) * 100));
+
+    // 6. Async patterns
+    const asyncScore = callbackCount === 0 ? 100 :
+      asyncCount > 0 ? Math.max(30, 100 - callbackCount * 10) :
+      Math.max(10, 100 - callbackCount * 15);
+
+    // Weighted health score
+    const healthScore = Math.round(
+      typeSafeScore   * 0.28 +
+      declScore       * 0.18 +
+      complexityScore * 0.20 +
+      modernityScore  * 0.15 +
+      equalityScore   * 0.10 +
+      asyncScore      * 0.09
+    );
+
+    // Risk level
+    let riskLevel, riskClass, riskDesc;
+    if (healthScore >= 70) {
+      riskLevel = 'Low Risk';       riskClass = 'risk-low';
+      riskDesc  = 'This codebase is in reasonable shape. Migration can proceed incrementally with low disruption.';
+    } else if (healthScore >= 40) {
+      riskLevel = 'Medium Risk';    riskClass = 'risk-medium';
+      riskDesc  = 'Significant legacy patterns detected. Plan a phased migration and allocate time for refactoring before strict mode.';
+    } else {
+      riskLevel = 'High Risk';      riskClass = 'risk-high';
+      riskDesc  = 'Heavy technical debt detected. A full migration will require substantial effort. Consider modularizing before converting.';
+    }
+
+    // ── Category breakdown ──
+    const categories = [];
+
+    if (anyCount > 0) categories.push({
+      cls: anyCount > 3 ? 'cat-critical' : 'cat-high',
+      label: 'Type Safety Issues',
+      count: anyCount,
+      items: [`${anyCount} any type${anyCount !== 1 ? 's' : ''}`, untypedRatio > 50 ? `${untypedRatio}% untyped params` : null].filter(Boolean),
+      fix: 'Replace any with specific types or unknown. Annotate all function parameters with proper types.',
+    });
+
+    if (varCount > 0) categories.push({
+      cls: varCount > 5 ? 'cat-high' : 'cat-medium',
+      label: 'Legacy Declarations',
+      count: varCount,
+      items: [`${varCount} var declaration${varCount !== 1 ? 's' : ''}`],
+      fix: 'Replace var with const (never reassigned) or let (reassigned). Prevents hoisting and scoping bugs.',
+    });
+
+    if (looseEq > 0) categories.push({
+      cls: 'cat-medium',
+      label: 'Loose Equality',
+      count: looseEq,
+      items: [`${looseEq} == or != operator${looseEq !== 1 ? 's' : ''}`],
+      fix: 'Replace == with === and != with !== for strict comparisons. Required by most TypeScript ESLint configs.',
+    });
+
+    if (requireCount > 0) categories.push({
+      cls: 'cat-high',
+      label: 'CommonJS Modules',
+      count: requireCount,
+      items: [`${requireCount} require() call${requireCount !== 1 ? 's' : ''}`],
+      fix: 'Convert require() to ES module import statements. Set "module": "ESNext" in tsconfig.json.',
+    });
+
+    if (protoCount > 0) categories.push({
+      cls: 'cat-high',
+      label: 'Prototype Pattern',
+      count: protoCount,
+      items: [`${protoCount} .prototype assignment${protoCount !== 1 ? 's' : ''}`],
+      fix: 'Migrate prototype-based objects to ES6 class syntax with typed properties and methods.',
+    });
+
+    if (callbackCount > 0) categories.push({
+      cls: callbackCount > 3 ? 'cat-high' : 'cat-medium',
+      label: 'Callback Pattern',
+      count: callbackCount,
+      items: [`${callbackCount} callback reference${callbackCount !== 1 ? 's' : ''}`, asyncCount > 0 ? `${asyncCount} async fn${asyncCount !== 1 ? 's' : ''} (mixed)` : null].filter(Boolean),
+      fix: 'Migrate callbacks to async/await. Define typed Promise<T> return types on async functions.',
+    });
+
+    if (nestDepth > 4) categories.push({
+      cls: nestDepth > 7 ? 'cat-critical' : 'cat-high',
+      label: 'Deep Nesting',
+      count: nestDepth,
+      items: [`Max nesting depth: ${nestDepth}`],
+      fix: 'Extract nested logic into named functions. Deep nesting increases complexity and makes type inference harder.',
+    });
+
+    if (loc > 250) categories.push({
+      cls: loc > 500 ? 'cat-critical' : 'cat-medium',
+      label: 'File Size',
+      count: loc,
+      items: [`${loc} lines of code`],
+      fix: `Split into ${Math.ceil(loc / 150)} smaller modules before migrating. Smaller files are safer to migrate one at a time.`,
+    });
+
+    if (categories.length === 0) categories.push({
+      cls: 'cat-low',
+      label: 'No Critical Issues',
+      count: 0,
+      items: ['Code structure looks clean'],
+      fix: 'Add tsconfig.json with strict: true and start adding type annotations to functions.',
+    });
+
+    // ── Roadmap ──
+    const roadmap = [
+      {
+        step: '01',
+        cls:  'step-1',
+        title: 'Preparation',
+        desc: `Add tsconfig.json with \`allowJs: true\` and \`checkJs: false\`. Rename files from \`.js\` to \`.ts\` one module at a time. Run \`tsc --noEmit\` to surface errors without blocking builds.`,
+      },
+      {
+        step: '02',
+        cls:  'step-2',
+        title: `Fix ${varCount + looseEq} Quick Wins`,
+        desc: requireCount > 0
+          ? `Replace all ${varCount} var declarations and ${looseEq} loose equality operators. Convert ${requireCount} require() calls to import statements.`
+          : `Replace all ${varCount} var declarations with const/let and fix ${looseEq} loose equality operators. These are safe, automated changes.`,
+      },
+      {
+        step: '03',
+        cls:  'step-3',
+        title: protoCount > 0 ? 'Migrate Prototype Pattern to Classes' : 'Annotate Functions & Interfaces',
+        desc: protoCount > 0
+          ? `Convert ${protoCount} prototype-based object${protoCount !== 1 ? 's' : ''} to ES6 class syntax. Define typed properties in the class body before the constructor.`
+          : `Add type annotations to all ${fnCount + arrowCount} functions. Define interfaces for shared data shapes. Use unknown instead of any.`,
+      },
+      {
+        step: '04',
+        cls:  'step-4',
+        title: 'Enable Strict Mode',
+        desc: `Enable \`strict: true\` in tsconfig.json. Fix remaining type errors — replace any with specific types, add missing return types, and resolve implicit any errors. Run the Any Type Detector to find remaining issues.`,
+      },
+    ];
+
+    // ── Render ──
+    const circumference = 2 * Math.PI * 42;
+    const offset = circumference - (healthScore / 100) * circumference;
+    const ringColor = healthScore >= 70 ? '#22d3a5' : healthScore >= 40 ? '#f59e0b' : '#f87171';
+
+    const metricsHTML = `
+      <div class="metrics-grid">
+        ${[
+          { label: 'Health Score',   value: healthScore,   sub: 'out of 100',       bar: healthScore,    max: 100 },
+          { label: 'Functions',      value: fnCount + arrowCount, sub: 'total declared', bar: Math.min((fnCount+arrowCount)*5, 100), max: 100 },
+          { label: 'Lines of Code',  value: loc,           sub: 'in this file',     bar: Math.min(loc/5, 100),  max: 100 },
+          { label: 'var Count',      value: varCount,      sub: 'to migrate',       bar: Math.min(varCount*8, 100), max: 100 },
+          { label: 'Nesting Depth',  value: nestDepth,     sub: 'max depth',        bar: Math.min(nestDepth*10, 100), max: 100 },
+          { label: 'any Types',      value: anyCount,      sub: 'detected',         bar: Math.min(anyCount*10, 100), max: 100 },
+        ].map(m => `
+          <div class="metric-card">
+            <span class="mc-label">${m.label}</span>
+            <span class="mc-value">${m.value}</span>
+            <span class="mc-sub">${m.sub}</span>
+            <div class="mc-bar">
+              <div class="mc-bar-fill ${fillClass(100 - m.bar)}" style="width:${m.bar}%"></div>
+            </div>
+          </div>
+        `).join('')}
+      </div>
+    `;
+
+    const breakdownHTML = categories.length > 0 ? `
+      <p class="roadmap-title" style="margin-bottom:12px">Issue Breakdown</p>
+      <div class="breakdown-list">
+        ${categories.map(cat => `
+          <div class="breakdown-row ${cat.cls}">
+            <div class="brow-top">
+              <span class="brow-label">${cat.label}</span>
+              ${cat.count > 0 ? `<span class="brow-count">${cat.count} found</span>` : ''}
+            </div>
+            <div class="brow-items">
+              ${cat.items.map(i => `<span class="brow-tag">${i}</span>`).join('')}
+            </div>
+            <div class="brow-fix">${cat.fix}</div>
+          </div>
+        `).join('')}
+      </div>
+    ` : '';
+
+    const roadmapHTML = `
+      <p class="roadmap-title">Migration Roadmap</p>
+      <div class="roadmap">
+        ${roadmap.map(r => `
+          <div class="roadmap-step">
+            <div class="step-dot ${r.cls}">${r.step}</div>
+            <div class="step-body">
+              <div class="step-title">${r.title}</div>
+              <div class="step-desc">${r.desc}</div>
+            </div>
+          </div>
+        `).join('')}
+      </div>
+    `;
+
+    const resultEl = document.getElementById('result');
+    resultEl.innerHTML = `
+      <div class="divider"></div>
+
+      <div class="health-row">
+        <div class="health-ring">
+          <svg viewBox="0 0 100 100">
+            <circle class="ring-bg"   cx="50" cy="50" r="42" />
+            <circle class="ring-fill" cx="50" cy="50" r="42"
+              stroke="${ringColor}"
+              stroke-dasharray="${circumference}"
+              stroke-dashoffset="${offset}"
+            />
+          </svg>
+          <div class="ring-label">
+            <span class="ring-score">${healthScore}</span>
+            <span class="ring-sub">health</span>
+          </div>
+        </div>
+        <div class="health-meta">
+          <div class="health-title">Codebase Health Report</div>
+          <div class="health-desc">${riskDesc}</div>
+          <div class="risk-badge ${riskClass}">${riskLevel}</div>
+        </div>
+      </div>
+
+      ${metricsHTML}
+      <div class="divider"></div>
+      ${breakdownHTML}
+      <div class="divider"></div>
+      ${roadmapHTML}
+    `;
+
+    resultEl.classList.add('visible');
+
+    // animate ring after render
+    setTimeout(() => {
+      const fill = resultEl.querySelector('.ring-fill');
+      if (fill) fill.style.strokeDashoffset = offset;
+    }, 50);
+
+    resultEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+
+  updateMeta();
+</script>
+
 </body>
 </html>
