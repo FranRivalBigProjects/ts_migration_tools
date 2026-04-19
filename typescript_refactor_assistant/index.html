@@ -1,21 +1,1191 @@
 <!DOCTYPE html>
-<html>
+
+<html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>typescript_refactor_assistant</title>
-<link rel="stylesheet" href="styles.css">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TypeScript Refactor Assistant – Step-by-Step TS Refactoring Tool</title>
+<meta name="description" content="Paste TypeScript or JavaScript code and get a step-by-step refactoring plan with annotated before/after code, interface extraction, type narrowing guidance, and safe migration strategies.">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Mono:wght@400;500&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&display=swap" rel="stylesheet">
+
+<style>
+  :root {
+    --bg:        #0c0e14;
+    --surface:   #12151e;
+    --surface-2: #171b26;
+    --border:    #1e2333;
+    --border-hi: #2c3450;
+    --accent:    #3b82f6;
+    --accent-2:  #818cf8;
+    --text:      #e2e8f0;
+    --muted:     #64748b;
+    --warning:   #f59e0b;
+    --danger:    #f87171;
+    --success:   #22d3a5;
+
+    --font-display: 'DM Serif Display', Georgia, serif;
+    --font-body:    'DM Sans', sans-serif;
+    --font-mono:    'DM Mono', monospace;
+    --radius:    10px;
+    --radius-lg: 18px;
+    --transition: 220ms cubic-bezier(.4,0,.2,1);
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-body);
+    font-size: 16px;
+    line-height: 1.7;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow-x: hidden;
+  }
+
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background-image:
+      linear-gradient(var(--border) 1px, transparent 1px),
+      linear-gradient(90deg, var(--border) 1px, transparent 1px);
+    background-size: 48px 48px;
+    opacity: .3;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  body::after {
+    content: '';
+    position: fixed;
+    top: -200px; left: 50%;
+    transform: translateX(-50%);
+    width: 700px; height: 400px;
+    background: radial-gradient(ellipse at center, rgba(59,130,246,.1) 0%, transparent 70%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .wrapper {
+    position: relative; z-index: 1;
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 0 24px;
+    width: 100%;
+    flex: 1;
+  }
+
+  nav {
+    position: relative; z-index: 2;
+    padding: 20px 24px;
+    max-width: 900px;
+    margin: 0 auto;
+    width: 100%;
+  }
+
+  nav a {
+    font-family: var(--font-mono);
+    font-size: .78rem;
+    letter-spacing: .06em;
+    color: var(--muted);
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: color var(--transition);
+  }
+
+  nav a:hover { color: var(--accent); }
+  nav a::before { content: '←'; }
+
+  header {
+    padding: 40px 0 36px;
+    border-bottom: 1px solid var(--border);
+    animation: fadeUp .5s ease both;
+  }
+
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    color: var(--accent);
+    background: rgba(59,130,246,.08);
+    border: 1px solid rgba(59,130,246,.2);
+    border-radius: 100px;
+    padding: 4px 12px;
+    margin-bottom: 18px;
+  }
+
+  header h1 {
+    font-family: var(--font-display);
+    font-size: clamp(1.6rem, 4vw, 2.4rem);
+    font-weight: 400;
+    line-height: 1.2;
+    color: #fff;
+    letter-spacing: -.02em;
+    margin-bottom: 10px;
+  }
+
+  header h1 em { font-style: italic; color: var(--accent); }
+  header p { color: var(--muted); font-size: .95rem; font-weight: 300; max-width: 600px; }
+
+  /* TOOL CARD */
+  .tool-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 28px;
+    margin: 36px 0;
+    animation: fadeUp .5s .1s ease both;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .tool-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, var(--accent), var(--accent-2));
+  }
+
+  /* REFACTOR MODE SELECTOR */
+  .mode-row {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 20px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .mode-btn {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    font-family: var(--font-mono);
+    font-size: .72rem;
+    letter-spacing: .04em;
+    color: var(--muted);
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 7px 14px;
+    cursor: pointer;
+    transition: all var(--transition);
+    user-select: none;
+  }
+
+  .mode-btn:hover { color: var(--text); border-color: var(--border-hi); }
+  .mode-btn.active { color: var(--accent); border-color: rgba(59,130,246,.4); background: rgba(59,130,246,.07); }
+
+  .mode-dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: currentColor;
+    flex-shrink: 0;
+  }
+
+  /* EDITOR */
+  .editor-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 10px;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .editor-label {
+    font-family: var(--font-mono);
+    font-size: .72rem;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: var(--muted);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .editor-label::before {
+    content: '';
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--accent-2);
+  }
+
+  .btn-small {
+    font-family: var(--font-mono);
+    font-size: .7rem;
+    color: var(--muted);
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 4px 12px;
+    cursor: pointer;
+    transition: color var(--transition), border-color var(--transition);
+  }
+
+  .btn-small:hover { color: var(--accent); border-color: rgba(59,130,246,.3); }
+
+  .editor-wrap {
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+    transition: border-color var(--transition), box-shadow var(--transition);
+    margin-bottom: 16px;
+  }
+
+  .editor-wrap:focus-within {
+    border-color: rgba(59,130,246,.4);
+    box-shadow: 0 0 0 3px rgba(59,130,246,.08);
+  }
+
+  textarea {
+    display: block;
+    width: 100%;
+    min-height: 260px;
+    background: var(--surface-2);
+    border: none;
+    outline: none;
+    padding: 14px;
+    color: var(--text);
+    font-family: var(--font-mono);
+    font-size: .85rem;
+    line-height: 1.65;
+    resize: vertical;
+    tab-size: 2;
+  }
+
+  textarea::placeholder { color: var(--muted); opacity: .5; }
+
+  .btn-run {
+    width: 100%;
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-radius: var(--radius);
+    padding: 14px 24px;
+    font-family: var(--font-mono);
+    font-size: .85rem;
+    font-weight: 500;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: background var(--transition), transform var(--transition), box-shadow var(--transition);
+  }
+
+  .btn-run:hover {
+    background: #5b9ef9;
+    transform: translateY(-1px);
+    box-shadow: 0 8px 24px rgba(59,130,246,.3);
+  }
+
+  .btn-run:active { transform: translateY(0); }
+
+  /* RESULT */
+  #result { margin-top: 28px; display: none; animation: fadeUp .4s ease both; }
+  #result.visible { display: block; }
+  .divider { height: 1px; background: var(--border); margin: 24px 0; }
+
+  /* summary bar */
+  .refactor-summary {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 24px;
+    flex-wrap: wrap;
+  }
+
+  .summary-title {
+    font-family: var(--font-display);
+    font-size: 1.3rem;
+    color: #fff;
+    flex: 1;
+  }
+
+  .step-count {
+    font-family: var(--font-mono);
+    font-size: .75rem;
+    color: var(--muted);
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 100px;
+    padding: 4px 14px;
+  }
+
+  /* REFACTOR STEPS */
+  .steps-list { display: flex; flex-direction: column; gap: 16px; }
+
+  .step-card {
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    transition: border-color var(--transition);
+  }
+
+  .step-card:hover { border-color: var(--border-hi); }
+
+  .step-card.priority-critical { border-left: 3px solid var(--danger); }
+  .step-card.priority-high     { border-left: 3px solid var(--warning); }
+  .step-card.priority-medium   { border-left: 3px solid var(--accent); }
+  .step-card.priority-low      { border-left: 3px solid var(--success); }
+
+  .step-top {
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+    padding: 18px 20px 14px;
+    cursor: pointer;
+    user-select: none;
+  }
+
+  .step-number {
+    font-family: var(--font-mono);
+    font-size: .68rem;
+    font-weight: 500;
+    color: var(--muted);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 3px 8px;
+    flex-shrink: 0;
+    margin-top: 2px;
+  }
+
+  .step-info { flex: 1; }
+
+  .step-title-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-bottom: 4px;
+  }
+
+  .step-name {
+    font-size: .95rem;
+    font-weight: 500;
+    color: var(--text);
+  }
+
+  .step-badge {
+    font-family: var(--font-mono);
+    font-size: .62rem;
+    font-weight: 500;
+    letter-spacing: .05em;
+    text-transform: uppercase;
+    border-radius: 4px;
+    padding: 2px 7px;
+  }
+
+  .priority-critical .step-badge { background: rgba(248,113,113,.15); color: var(--danger); }
+  .priority-high     .step-badge { background: rgba(245,158,11,.15);  color: var(--warning); }
+  .priority-medium   .step-badge { background: rgba(59,130,246,.12);  color: var(--accent); }
+  .priority-low      .step-badge { background: rgba(34,211,165,.1);   color: var(--success); }
+
+  .step-why { font-size: .825rem; color: var(--muted); font-weight: 300; line-height: 1.5; }
+
+  .step-toggle {
+    font-family: var(--font-mono);
+    font-size: .9rem;
+    color: var(--muted);
+    flex-shrink: 0;
+    transition: transform var(--transition);
+  }
+
+  .step-card.expanded .step-toggle { transform: rotate(180deg); }
+
+  /* collapsible body */
+  .step-body {
+    display: none;
+    padding: 0 20px 20px;
+    border-top: 1px solid var(--border);
+  }
+
+  .step-card.expanded .step-body { display: block; }
+
+  /* before/after */
+  .before-after {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-top: 16px;
+  }
+
+  .code-panel { display: flex; flex-direction: column; gap: 6px; }
+
+  .code-panel-label {
+    font-family: var(--font-mono);
+    font-size: .65rem;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .label-before { color: var(--danger); }
+  .label-after  { color: var(--success); }
+
+  .label-before::before { content: '✕'; font-size: .7rem; }
+  .label-after::before  { content: '✓'; font-size: .7rem; }
+
+  .code-block {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 12px 14px;
+    font-family: var(--font-mono);
+    font-size: .78rem;
+    line-height: 1.6;
+    white-space: pre;
+    overflow-x: auto;
+    color: var(--muted);
+    flex: 1;
+  }
+
+  .code-block.after { color: var(--text); border-color: rgba(34,211,165,.2); }
+  .code-block .hi   { color: var(--success); font-weight: 500; }
+  .code-block .rm   { color: var(--danger);  text-decoration: line-through; opacity: .6; }
+  .code-block .kw   { color: var(--accent-2); }
+  .code-block .ty   { color: var(--success); }
+  .code-block .cm   { color: #374151; font-style: italic; }
+
+  /* explanation */
+  .step-explanation {
+    margin-top: 14px;
+    font-size: .85rem;
+    color: var(--muted);
+    font-weight: 300;
+    line-height: 1.6;
+    padding: 12px 14px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    border-left: 2px solid var(--accent);
+  }
+
+  /* copy btn per step */
+  .step-copy {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-family: var(--font-mono);
+    font-size: .7rem;
+    color: var(--muted);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 4px 12px;
+    cursor: pointer;
+    margin-top: 10px;
+    transition: color var(--transition), border-color var(--transition);
+  }
+
+  .step-copy:hover { color: var(--success); border-color: rgba(34,211,165,.3); }
+
+  /* refactored output block */
+  .output-block {
+    margin-top: 24px;
+    background: var(--surface-2);
+    border: 1px solid rgba(34,211,165,.2);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+  }
+
+  .output-block-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 18px;
+    border-bottom: 1px solid var(--border);
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .output-block-title {
+    font-family: var(--font-mono);
+    font-size: .72rem;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: var(--success);
+  }
+
+  .output-code {
+    padding: 16px 18px;
+    font-family: var(--font-mono);
+    font-size: .82rem;
+    line-height: 1.65;
+    white-space: pre;
+    overflow-x: auto;
+    color: var(--text);
+  }
+
+  .output-code .kw { color: #818cf8; }
+  .output-code .ty { color: #22d3a5; }
+  .output-code .st { color: #fbbf24; }
+  .output-code .cm { color: #374151; font-style: italic; }
+  .output-code .fn { color: #60a5fa; }
+
+  /* INFO */
+  .info-section {
+    padding: 40px 0;
+    border-top: 1px solid var(--border);
+    animation: fadeUp .5s .2s ease both;
+  }
+
+  .info-section h2 {
+    font-family: var(--font-display);
+    font-size: 1.4rem;
+    font-weight: 400;
+    color: #fff;
+    margin-bottom: 16px;
+  }
+
+  .info-section p { color: var(--muted); font-size: .9rem; font-weight: 300; margin-bottom: 12px; max-width: 620px; }
+  .info-section ul { list-style: none; display: flex; flex-direction: column; gap: 8px; margin-top: 4px; }
+  .info-section ul li { display: flex; gap: 10px; font-size: .875rem; color: var(--text); }
+  .info-section ul li::before { content: '→'; color: var(--accent); font-family: var(--font-mono); font-size: .75rem; margin-top: 4px; flex-shrink: 0; }
+
+  footer {
+    position: relative; z-index: 1;
+    border-top: 1px solid var(--border);
+    padding: 28px 24px;
+    max-width: 900px;
+    margin: 0 auto;
+    width: 100%;
+  }
+
+  footer p { font-size: .8rem; color: var(--muted); font-weight: 300; }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(14px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  @media (max-width: 580px) {
+    .tool-card { padding: 18px; }
+    .before-after { grid-template-columns: 1fr; }
+  }
+</style>
+
 </head>
 <body>
-<div class="container">
-<h2>Typescript Refactor Assistant</h2>
 
-<textarea id="input" placeholder="Paste JS/TS code..."></textarea>
+<nav class="wrapper">
+  <a href="/ts_migration_tools/">TypeScript Migration Tools</a>
+</nav>
 
-<button onclick="analyze()">Run Tool</button>
+<div class="wrapper">
 
-<div id="result"></div>
+  <header>
+    <div class="badge">Refactor Assistant</div>
+    <h1>TypeScript <em>Refactor</em> Assistant</h1>
+    <p>Paste your code and select a refactoring focus. The assistant generates a prioritized, step-by-step refactoring plan with before/after code examples and a fully refactored output you can copy directly.</p>
+  </header>
+
+  <div class="tool-card">
+
+```
+<!-- Mode selector -->
+<div class="mode-row">
+  <button class="mode-btn active" data-mode="full" onclick="setMode(this)">
+    <span class="mode-dot"></span>Full Refactor
+  </button>
+  <button class="mode-btn" data-mode="types" onclick="setMode(this)">
+    <span class="mode-dot"></span>Type Safety
+  </button>
+  <button class="mode-btn" data-mode="modern" onclick="setMode(this)">
+    <span class="mode-dot"></span>Modernize Syntax
+  </button>
+  <button class="mode-btn" data-mode="async" onclick="setMode(this)">
+    <span class="mode-dot"></span>Async Patterns
+  </button>
+  <button class="mode-btn" data-mode="structure" onclick="setMode(this)">
+    <span class="mode-dot"></span>Structure & Classes
+  </button>
 </div>
 
-<script src="script.js"></script>
+<div class="editor-header">
+  <span class="editor-label">Code Input</span>
+  <div style="display:flex;gap:8px">
+    <button class="btn-small" onclick="loadSample()">Load Sample</button>
+    <button class="btn-small" onclick="clearTool()">Clear</button>
+  </div>
+</div>
+
+<div class="editor-wrap">
+  <textarea id="codeInput"
+    placeholder="// Paste your TypeScript or JavaScript code here…"
+  ></textarea>
+</div>
+
+<button class="btn-run" onclick="refactor()">Generate Refactoring Plan</button>
+
+<div id="result"></div>
+```
+
+  </div>
+
+  <div class="info-section">
+    <h2>What the Refactor Assistant Covers</h2>
+    <p>Choose a focus mode or run a full refactor. Each plan is generated based on patterns detected in your actual code.</p>
+    <ul>
+      <li>Type Safety — replace any, annotate parameters, extract interfaces, add generics</li>
+      <li>Modernize Syntax — var → const/let, loose equality, template literals, arrow functions</li>
+      <li>Async Patterns — callback → Promise → async/await, typed Promise return types</li>
+      <li>Structure & Classes — prototype → class, module extraction, single responsibility</li>
+      <li>Full Refactor — all of the above, prioritized by impact and safety</li>
+    </ul>
+  </div>
+
+</div>
+
+<footer class="wrapper">
+  <p>TypeScript Migration Tools — TypeScript Refactor Assistant</p>
+</footer>
+
+<script>
+  let currentMode = 'full';
+
+  function setMode(btn) {
+    document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    currentMode = btn.dataset.mode;
+  }
+
+  function loadSample() {
+    document.getElementById('codeInput').value =
+`// Legacy API module with multiple refactoring needs
+var API_BASE = "https://api.example.com/v1";
+var timeout = 5000;
+
+function makeRequest(endpoint, method, data, callback) {
+  var url = API_BASE + endpoint;
+  var options = {
+    method: method || "GET",
+    headers: { "Content-Type": "application/json" },
+    body: data ? JSON.stringify(data) : undefined
+  };
+
+  fetch(url, options)
+    .then(function(response) {
+      if (response.status == 200) {
+        return response.json();
+      } else {
+        callback(new Error("Request failed: " + response.status), null);
+      }
+    })
+    .then(function(json) {
+      callback(null, json);
+    })
+    .catch(function(err) {
+      callback(err, null);
+    });
+}
+
+function getUser(id, callback) {
+  makeRequest("/users/" + id, "GET", null, callback);
+}
+
+function updateUser(id, data, callback) {
+  if (data == null || data == undefined) {
+    callback(new Error("No data provided"), null);
+    return;
+  }
+  makeRequest("/users/" + id, "PUT", data, callback);
+}
+
+var UserCache = function() {
+  this.store = {};
+  this.maxSize = 100;
+};
+
+UserCache.prototype.get = function(key) {
+  return this.store[key] || null;
+};
+
+UserCache.prototype.set = function(key, value) {
+  if (Object.keys(this.store).length >= this.maxSize) {
+    var firstKey = Object.keys(this.store)[0];
+    delete this.store[firstKey];
+  }
+  this.store[key] = value;
+};`;
+  }
+
+  function clearTool() {
+    document.getElementById('codeInput').value = '';
+    document.getElementById('result').classList.remove('visible');
+  }
+
+  function esc(s) {
+    return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  // ── Simple TS highlight ───────────────────────────────
+  function hlTs(code) {
+    const kws  = /\b(const|let|var|function|return|class|new|this|if|else|for|while|async|await|export|import|interface|type|implements|extends|void|unknown|any|null|undefined|Promise|true|false|readonly|private|public)\b/g;
+    const tys  = /\b(string|number|boolean|object|Record|Partial|Array|Pick|Omit|Required)\b/g;
+    const strs = /(["'`])(?:(?!\1)[^\\]|\\.)*\1/g;
+    const cmts = /(\/\/[^\n]*)/g;
+    const fns  = /\b([a-zA-Z_$]\w*)\s*(?=\()/g;
+
+    return esc(code)
+      .replace(cmts,  m => `<span class="cm">${m}</span>`)
+      .replace(strs,  m => `<span class="st">${m}</span>`)
+      .replace(kws,   m => `<span class="kw">${m}</span>`)
+      .replace(tys,   m => `<span class="ty">${m}</span>`)
+      .replace(fns,   (_, n) => `<span class="fn">${n}</span>(`)
+  }
+
+  // ── Step toggle ───────────────────────────────────────
+  function toggleStep(el) {
+    el.closest('.step-card').classList.toggle('expanded');
+  }
+
+  // ── Copy step code ────────────────────────────────────
+  function copyStep(btn, code) {
+    navigator.clipboard.writeText(code)
+      .then(() => { btn.textContent = '✓ Copied'; setTimeout(() => btn.textContent = '⎘ Copy after', 1500); })
+      .catch(() => {});
+  }
+
+  // ── Build step card ───────────────────────────────────
+  function buildStep(num, priority, name, why, before, after, explanation) {
+    const p = priority.toLowerCase().replace(' ', '-');
+    return `
+      <div class="step-card priority-${p}">
+        <div class="step-top" onclick="toggleStep(this)">
+          <span class="step-number">Step ${num}</span>
+          <div class="step-info">
+            <div class="step-title-row">
+              <span class="step-name">${name}</span>
+              <span class="step-badge">${priority}</span>
+            </div>
+            <div class="step-why">${why}</div>
+          </div>
+          <span class="step-toggle">⌄</span>
+        </div>
+        <div class="step-body">
+          <div class="before-after">
+            <div class="code-panel">
+              <span class="code-panel-label label-before">Before</span>
+              <div class="code-block"><span class="rm">${esc(before)}</span></div>
+            </div>
+            <div class="code-panel">
+              <span class="code-panel-label label-after">After</span>
+              <div class="code-block after">${hlTs(after)}</div>
+            </div>
+          </div>
+          <div class="step-explanation">${explanation}</div>
+          <button class="step-copy" onclick="copyStep(this, \`${after.replace(/`/g,'\\`')}\`)">⎘ Copy after</button>
+        </div>
+      </div>
+    `;
+  }
+
+  // ── Detectors ─────────────────────────────────────────
+  const has = (code, rx) => rx.test(code);
+
+  // ── Apply transformations ─────────────────────────────
+  function applyRefactor(code) {
+    let out = code;
+    // var → const/let (simple: assign once → const)
+    out = out.replace(/\bvar\s+(\w+)\s*=/g, (m, name) => {
+      const reassigned = new RegExp(`\\b${name}\\s*=(?!=)`, 'g');
+      const afterDecl  = out.slice(out.indexOf(m) + m.length);
+      return reassigned.test(afterDecl) ? `let ${name} =` : `const ${name} =`;
+    });
+    // loose equality
+    out = out.replace(/([^=!<>])={2}(?!=)/g, '$1===');
+    out = out.replace(/!={1}(?!=)/g, '!==');
+    // callback pattern → async/await
+    out = out.replace(/\.then\(function\s*\((\w+)\)\s*\{/g, '// .then() → await\n  // const $1 = await ');
+    // string concat → template literal (simple cases)
+    out = out.replace(/"([^"]+)"\s*\+\s*(\w+)/g, '`$1${$2}`');
+    out = out.replace(/(\w+)\s*\+\s*"([^"]+)"/g, '`${$1}$2`');
+    // prototype methods → class hint comment
+    out = out.replace(/(\w+)\.prototype\.(\w+)\s*=\s*function/g,
+      '// Migrate to class method:\n  $2');
+    return out;
+  }
+
+  // ── Main refactor ─────────────────────────────────────
+  function refactor() {
+    const code = document.getElementById('codeInput').value;
+    if (!code.trim()) { alert('Please paste some code first.'); return; }
+
+    const mode = currentMode;
+
+    // Detect what's present
+    const hasVar       = /\bvar\b/.test(code);
+    const hasAny       = /:\s*any\b|as\s+any/.test(code);
+    const hasLooseEq   = /[^=!<>]={2}(?!=)|!={1}(?!=)/.test(code);
+    const hasCallback  = /\bcallback\b|\bfunction\s*\(.*,\s*callback/.test(code);
+    const hasPrototype = /\.prototype\./.test(code);
+    const hasConcat    = /"[^"]*"\s*\+\s*\w+|\w+\s*\+\s*"[^"]*"/.test(code);
+    const hasUntypedFn = /function\s+\w+\s*\([^)]*\)\s*\{/.test(code);
+    const hasRequire   = /\brequire\s*\(/.test(code);
+    const hasFetch     = /\bfetch\s*\(/.test(code);
+    const hasThen      = /\.then\s*\(/.test(code);
+
+    // Build step list based on mode
+    const allSteps = [];
+
+    // ── TYPE SAFETY steps ──
+    if (mode === 'full' || mode === 'types') {
+
+      if (hasUntypedFn) {
+        allSteps.push({
+          priority: 'Critical',
+          name: 'Annotate Function Parameters',
+          why: 'Untyped parameters default to implicit any, defeating TypeScript\'s purpose.',
+          before: 'function makeRequest(endpoint, method, data, callback) {',
+          after:  `interface RequestOptions {
+  endpoint: string;
+  method?: 'GET' | 'POST' | 'PUT' | 'DELETE';
+  data?: unknown;
+}
+
+async function makeRequest(options: RequestOptions): Promise<unknown> {`,
+          explanation: 'Extract a typed options interface instead of positional parameters. This eliminates implicit any, makes the API self-documenting, and allows optional fields with clear types. The return type Promise&lt;unknown&gt; is safer than Promise&lt;any&gt; — callers must narrow the type before using it.',
+        });
+      }
+
+      if (hasPrototype) {
+        allSteps.push({
+          priority: 'High',
+          name: 'Extract Interface for Class Shape',
+          why: 'Before migrating the prototype to a class, define its interface to enforce the contract.',
+          before: `var UserCache = function() {
+  this.store = {};
+  this.maxSize = 100;
+};`,
+          after: `interface IUserCache<T> {
+  get(key: string): T | null;
+  set(key: string, value: T): void;
+}
+
+class UserCache<T> implements IUserCache<T> {
+  private store: Record<string, T> = {};
+  private readonly maxSize: number;
+
+  constructor(maxSize = 100) {
+    this.maxSize = maxSize;
+  }`,
+          explanation: 'Defining the interface before the implementation allows other modules to depend on the contract (IUserCache) rather than the concrete class. The generic parameter &lt;T&gt; makes the cache reusable for any value type. Private properties prevent accidental external mutation.',
+        });
+      }
+
+      if (hasAny) {
+        allSteps.push({
+          priority: 'High',
+          name: 'Replace any with unknown + Type Guards',
+          why: 'any disables type checking entirely. unknown is safer — it forces callers to narrow the type before use.',
+          before: `const response: any = await fetch(url);
+const data: any = response.json();`,
+          after: `const response: Response = await fetch(url);
+const raw: unknown = await response.json();
+
+// Narrow with a type guard:
+function isUser(val: unknown): val is User {
+  return typeof val === 'object' && val !== null && 'id' in val;
+}
+
+if (isUser(raw)) {
+  // raw is User here — fully typed
+  console.log(raw.id);
+}`,
+          explanation: 'unknown accepts any value like any, but prevents you from using it without narrowing first. A type guard function (val is User) lets TypeScript know the type within the if block. This pattern eliminates runtime type errors while keeping flexibility.',
+        });
+      }
+    }
+
+    // ── MODERNIZE steps ──
+    if (mode === 'full' || mode === 'modern') {
+
+      if (hasVar) {
+        allSteps.push({
+          priority: 'High',
+          name: 'Replace var with const / let',
+          why: 'var is function-scoped and hoisted, causing subtle bugs. const and let are block-scoped.',
+          before: `var API_BASE = "https://api.example.com/v1";
+var timeout = 5000;
+var url = API_BASE + endpoint;`,
+          after: `const API_BASE = "https://api.example.com/v1";
+const TIMEOUT_MS = 5000; // renamed: const names should be UPPER_CASE
+const url = \`\${API_BASE}\${endpoint}\`;`,
+          explanation: 'const prevents accidental reassignment and signals intent. Use UPPER_SNAKE_CASE for module-level constants. The URL string concatenation is also replaced with a template literal in the same pass — it\'s more readable and avoids implicit string coercion.',
+        });
+      }
+
+      if (hasConcat || hasVar) {
+        allSteps.push({
+          priority: 'Medium',
+          name: 'Migrate String Concatenation to Template Literals',
+          why: 'Template literals are more readable and avoid implicit type coercion in string building.',
+          before: `var url = API_BASE + endpoint;
+var msg = "Request failed: " + response.status;`,
+          after: `const url = \`\${API_BASE}\${endpoint}\`;
+const msg = \`Request failed: \${response.status}\`;`,
+          explanation: 'Template literals (backticks) embed expressions directly and handle toString() automatically. They also support multi-line strings without concatenation. TypeScript understands them natively and can type-check the interpolated expressions.',
+        });
+      }
+
+      if (hasLooseEq) {
+        allSteps.push({
+          priority: 'Medium',
+          name: 'Enforce Strict Equality',
+          why: 'Loose == performs implicit type coercion. TypeScript ESLint\'s eqeqeq rule requires === everywhere.',
+          before: `if (response.status == 200) {
+if (data == null || data == undefined) {`,
+          after: `if (response.status === 200) {
+if (data === null || data === undefined) {
+// Or more concisely:
+if (data == null) { // == null catches both null AND undefined in TS`,
+          explanation: 'Replace == with === for type-safe comparisons. The one exception: data == null (with ==) is a TypeScript idiom that catches both null and undefined in one check — many codebases intentionally keep this pattern while enforcing === everywhere else.',
+        });
+      }
+
+      if (hasRequire) {
+        allSteps.push({
+          priority: 'High',
+          name: 'Convert CommonJS to ES Modules',
+          why: 'require() is CommonJS — TypeScript works best with ES module import/export syntax.',
+          before: `const express = require('express');
+const { Router } = require('express');
+module.exports = { UserService };`,
+          after: `import express from 'express';
+import { Router } from 'express';
+export { UserService };
+// Or: export default UserService;`,
+          explanation: 'ES modules are statically analyzable, which enables better tree-shaking, type inference, and IDE support. Set "module": "ESNext" and "moduleResolution": "bundler" in tsconfig.json. Named exports (export { X }) are preferred over default exports for better refactoring support.',
+        });
+      }
+    }
+
+    // ── ASYNC steps ──
+    if (mode === 'full' || mode === 'async') {
+
+      if (hasCallback) {
+        allSteps.push({
+          priority: 'Critical',
+          name: 'Migrate Callbacks to async/await',
+          why: 'Callbacks create pyramid-of-doom nesting, make error handling error-prone, and cannot be typed cleanly.',
+          before: `function getUser(id, callback) {
+  makeRequest("/users/" + id, "GET", null, callback);
+}
+// Usage:
+getUser(123, function(err, user) {
+  if (err) { handle(err); return; }
+  console.log(user.name);
+});`,
+          after: `async function getUser(id: number): Promise<User> {
+  const response = await fetch(\`\${API_BASE}/users/\${id}\`);
+  if (!response.ok) {
+    throw new Error(\`Failed to fetch user \${id}: \${response.status}\`);
+  }
+  return response.json() as Promise<User>;
+}
+
+// Usage:
+try {
+  const user = await getUser(123);
+  console.log(user.name); // fully typed
+} catch (err) {
+  handle(err);
+}`,
+          explanation: 'async/await flattens callback nesting into linear, readable code. The typed return Promise&lt;User&gt; propagates the type through every await call site — callers get full autocomplete on user. Error handling moves to a single try/catch instead of checking err in every callback.',
+        });
+      }
+
+      if (hasThen && !hasCallback) {
+        allSteps.push({
+          priority: 'High',
+          name: 'Convert .then() Chains to async/await',
+          why: '.then() chains are harder to read and debug than async/await, especially with error handling.',
+          before: `fetch(url, options)
+  .then(function(response) {
+    return response.json();
+  })
+  .then(function(data) {
+    callback(null, data);
+  })
+  .catch(function(err) {
+    callback(err, null);
+  });`,
+          after: `async function request<T>(url: string, options: RequestInit): Promise<T> {
+  const response = await fetch(url, options);
+  if (!response.ok) {
+    throw new Error(\`HTTP \${response.status}: \${response.statusText}\`);
+  }
+  return response.json() as Promise<T>;
+}`,
+          explanation: 'The generic parameter &lt;T&gt; lets callers specify the expected response type: request&lt;User&gt;(...). This eliminates the callback pattern entirely and makes the error path explicit — any failed fetch throws, and the caller handles it with try/catch.',
+        });
+      }
+    }
+
+    // ── STRUCTURE steps ──
+    if (mode === 'full' || mode === 'structure') {
+
+      if (hasPrototype) {
+        allSteps.push({
+          priority: 'High',
+          name: 'Convert Prototype Pattern to ES6 Class',
+          why: 'Prototype assignment is pre-ES6. TypeScript\'s class syntax supports typed properties, access modifiers, and generics.',
+          before: `UserCache.prototype.get = function(key) {
+  return this.store[key] || null;
+};
+UserCache.prototype.set = function(key, value) {
+  if (Object.keys(this.store).length >= this.maxSize) {
+    var firstKey = Object.keys(this.store)[0];
+    delete this.store[firstKey];
+  }
+  this.store[key] = value;
+};`,
+          after: `class UserCache<T> {
+  private store: Record<string, T> = {};
+  private readonly maxSize: number;
+
+  constructor(maxSize = 100) {
+    this.maxSize = maxSize;
+  }
+
+  get(key: string): T | null {
+    return this.store[key] ?? null;
+  }
+
+  set(key: string, value: T): void {
+    if (Object.keys(this.store).length >= this.maxSize) {
+      const [firstKey] = Object.keys(this.store);
+      delete this.store[firstKey];
+    }
+    this.store[key] = value;
+  }
+}`,
+          explanation: 'The class body groups properties and methods, enforces access modifiers (private prevents external mutation), and the generic &lt;T&gt; makes the cache type-safe for any value. The ?? operator replaces || for null-coalescing — safer because it only falls back on null/undefined, not falsy values like 0 or empty string.',
+        });
+      }
+
+      if (hasFetch) {
+        allSteps.push({
+          priority: 'Medium',
+          name: 'Extract Typed HTTP Client',
+          why: 'Scattered fetch() calls are hard to test and type. A typed wrapper centralizes error handling and response typing.',
+          before: `fetch(url, {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify(data)
+})`,
+          after: `class HttpClient {
+  constructor(private readonly baseUrl: string) {}
+
+  async post<TBody, TResponse>(
+    path: string,
+    body: TBody
+  ): Promise<TResponse> {
+    const response = await fetch(\`\${this.baseUrl}\${path}\`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    if (!response.ok) throw new Error(\`POST \${path} failed: \${response.status}\`);
+    return response.json() as Promise<TResponse>;
+  }
+}
+
+// Usage:
+const client = new HttpClient(API_BASE);
+const result = await client.post<CreateUserDto, User>('/users', userData);`,
+          explanation: 'A typed HttpClient wraps all fetch calls. The double generic &lt;TBody, TResponse&gt; enforces that the request body and response shape are always declared at the call site. This makes every API call self-documenting and testable by injecting a mock client.',
+        });
+      }
+    }
+
+    // Fallback if nothing detected for the mode
+    if (allSteps.length === 0) {
+      allSteps.push({
+        priority: 'Low',
+        name: 'Enable TypeScript Strict Mode',
+        why: 'No major issues detected for this mode. The next step is enabling stricter compiler options.',
+        before: `// tsconfig.json
+{
+  "compilerOptions": {
+    "target": "ES2020"
+  }
+}`,
+        after: `// tsconfig.json
+{
+  "compilerOptions": {
+    "target": "ES2020",
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "exactOptionalPropertyTypes": true,
+    "noImplicitReturns": true
+  }
+}`,
+        explanation: 'strict: true enables strictNullChecks, noImplicitAny, strictFunctionTypes, and more in one flag. The additional flags catch array access without undefined checks and prevent optional property confusion. Enable these incrementally if the codebase has many existing type errors.',
+      });
+    }
+
+    // Build refactored output
+    const refactored = applyRefactor(code);
+
+    // Render
+    const stepsHTML = allSteps.map((s, i) =>
+      buildStep(i + 1, s.priority, s.name, s.why, s.before, s.after, s.explanation)
+    ).join('');
+
+    const resultEl = document.getElementById('result');
+    resultEl.innerHTML = `
+      <div class="divider"></div>
+      <div class="refactor-summary">
+        <span class="summary-title">Refactoring Plan</span>
+        <span class="step-count">${allSteps.length} step${allSteps.length !== 1 ? 's' : ''} · ${currentMode === 'full' ? 'Full Refactor' : document.querySelector('.mode-btn.active').textContent.trim()} mode</span>
+      </div>
+      <div class="steps-list">${stepsHTML}</div>
+
+      <div class="divider"></div>
+
+      <div class="output-block">
+        <div class="output-block-header">
+          <span class="output-block-title">Auto-Refactored Output</span>
+          <button class="btn-small" onclick="copyOutput()">⎘ Copy</button>
+        </div>
+        <div class="output-code" id="refactoredCode">${hlTs(refactored)}</div>
+      </div>
+    `;
+
+    // expand first step automatically
+    const firstCard = resultEl.querySelector('.step-card');
+    if (firstCard) firstCard.classList.add('expanded');
+
+    resultEl.classList.add('visible');
+    resultEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+
+  function copyOutput() {
+    const el = document.getElementById('refactoredCode');
+    navigator.clipboard.writeText(el.innerText || el.textContent)
+      .then(() => alert('Refactored code copied to clipboard.'))
+      .catch(() => {});
+  }
+</script>
+
 </body>
 </html>
