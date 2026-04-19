@@ -1,112 +1,636 @@
 <!DOCTYPE html>
+
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <!-- Google Verification -->
-    <meta name="google-site-verification" content="PkLa_ViOo6FAHpvh8SacceMb95o9tePRdrqLNBz9X1M" />
+```
+<!-- Google Verification -->
+<meta name="google-site-verification" content="PkLa_ViOo6FAHpvh8SacceMb95o9tePRdrqLNBz9X1M" />
 
-    <!-- SEO Meta -->
-    <title>TypeScript Migration Tools for Converting JS to TS & Refactoring Legacy Code</title>
-    <meta name="description" content="Migrate JavaScript to TypeScript with tools for detecting any types, analyzing legacy code, converting JS to TS, and assisting refactoring. Improve code safety and scalability.">
+<!-- SEO Meta -->
+<title>TypeScript Migration Tools – Convert JS to TS, Detect any Types & Refactor Legacy Code</title>
+<meta name="description" content="Free tools to migrate JavaScript to TypeScript step by step. Detect unsafe any types, analyze legacy codebases, auto-convert JS files to TS, and get refactoring guidance. Start your TS migration today.">
 
-    <!-- Keywords -->
-    <meta name="keywords" content="typescript migration tools, convert javascript to typescript tool, detect any types typescript, legacy code analyzer typescript, typescript refactor assistant, migrate js to ts best practices">
+<!-- Keywords -->
+<meta name="keywords" content="typescript migration tools, convert javascript to typescript tool, detect any types typescript, legacy code analyzer typescript, typescript refactor assistant, migrate js to ts best practices, javascript to typescript converter online, how to migrate codebase to typescript, typescript any type checker, typescript migration guide">
+
+<!-- Open Graph -->
+<meta property="og:title" content="TypeScript Migration Tools – Convert JS to TS & Refactor Legacy Code">
+<meta property="og:description" content="Free tools to detect any types, convert JS to TS, analyze legacy code, and refactor safely. Migrate to TypeScript with confidence.">
+<meta property="og:type" content="website">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Mono:wght@400;500&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&display=swap" rel="stylesheet">
+
+<style>
+    /* ── TOKENS ── */
+    :root {
+        --bg:        #0c0e14;
+        --surface:   #12151e;
+        --surface-2: #171b26;
+        --border:    #1e2333;
+        --border-hi: #2c3450;
+        --accent:    #3b82f6;
+        --accent-2:  #818cf8;
+        --accent-glow: rgba(59,130,246,.15);
+        --text:      #e2e8f0;
+        --muted:     #64748b;
+        --success:   #22d3a5;
+        --warning:   #f59e0b;
+        --danger:    #f87171;
+
+        --font-display: 'DM Serif Display', Georgia, serif;
+        --font-body:    'DM Sans', sans-serif;
+        --font-mono:    'DM Mono', monospace;
+        --radius:    10px;
+        --radius-lg: 18px;
+        --transition: 220ms cubic-bezier(.4,0,.2,1);
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+
+    body {
+        background: var(--bg);
+        color: var(--text);
+        font-family: var(--font-body);
+        font-size: 16px;
+        line-height: 1.7;
+        min-height: 100vh;
+        overflow-x: hidden;
+    }
+
+    /* ── BACKGROUND ── */
+    body::before {
+        content: '';
+        position: fixed;
+        inset: 0;
+        background-image:
+            linear-gradient(var(--border) 1px, transparent 1px),
+            linear-gradient(90deg, var(--border) 1px, transparent 1px);
+        background-size: 48px 48px;
+        opacity: .3;
+        pointer-events: none;
+        z-index: 0;
+    }
+
+    /* blue glow top center */
+    body::after {
+        content: '';
+        position: fixed;
+        top: -200px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 800px;
+        height: 500px;
+        background: radial-gradient(ellipse at center, rgba(59,130,246,.12) 0%, transparent 70%);
+        pointer-events: none;
+        z-index: 0;
+    }
+
+    /* ── LAYOUT ── */
+    .wrapper {
+        position: relative;
+        z-index: 1;
+        max-width: 1060px;
+        margin: 0 auto;
+        padding: 0 24px;
+    }
+
+    /* ── HEADER ── */
+    header {
+        padding: 80px 0 64px;
+        border-bottom: 1px solid var(--border);
+        animation: fadeUp .6s ease both;
+    }
+
+    .header-inner {
+        display: flex;
+        flex-direction: column;
+        gap: 22px;
+        max-width: 720px;
+    }
+
+    .header-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        font-family: var(--font-mono);
+        font-size: 11px;
+        font-weight: 500;
+        letter-spacing: .12em;
+        text-transform: uppercase;
+        color: var(--accent);
+        background: rgba(59,130,246,.08);
+        border: 1px solid rgba(59,130,246,.25);
+        border-radius: 100px;
+        padding: 5px 14px;
+        width: fit-content;
+    }
+
+    .header-badge::before {
+        content: '';
+        width: 6px; height: 6px;
+        border-radius: 50%;
+        background: var(--accent);
+        animation: pulse 2s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+        0%, 100% { opacity: 1; transform: scale(1); }
+        50%       { opacity: .3; transform: scale(.75); }
+    }
+
+    header h1 {
+        font-family: var(--font-display);
+        font-size: clamp(2rem, 5vw, 3.2rem);
+        font-weight: 400;
+        line-height: 1.15;
+        letter-spacing: -.02em;
+        color: #fff;
+    }
+
+    header h1 em {
+        font-style: italic;
+        color: var(--accent);
+    }
+
+    header > .wrapper > p,
+    .header-inner > p {
+        font-size: 1.05rem;
+        color: var(--muted);
+        font-weight: 300;
+        max-width: 600px;
+    }
+
+    /* ── SECTIONS ── */
+    section {
+        padding: 60px 0;
+        border-bottom: 1px solid var(--border);
+    }
+
+    section:last-of-type { border-bottom: none; }
+
+    section h2 {
+        font-family: var(--font-display);
+        font-size: 1.7rem;
+        font-weight: 400;
+        color: #fff;
+        margin-bottom: 20px;
+        letter-spacing: -.01em;
+    }
+
+    section > .wrapper > p,
+    section p {
+        color: var(--muted);
+        max-width: 640px;
+        margin-bottom: 22px;
+        font-weight: 300;
+    }
+
+    /* ── WHY LIST ── */
+    .why-list {
+        list-style: none;
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+        gap: 12px;
+        margin-top: 4px;
+    }
+
+    .why-list li {
+        display: flex;
+        align-items: flex-start;
+        gap: 10px;
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        padding: 14px 16px;
+        font-size: .9rem;
+        color: var(--text);
+        transition: border-color var(--transition);
+    }
+
+    .why-list li:hover { border-color: var(--border-hi); }
+
+    .why-list li::before {
+        content: '→';
+        color: var(--accent);
+        font-family: var(--font-mono);
+        font-size: .75rem;
+        margin-top: 3px;
+        flex-shrink: 0;
+    }
+
+    .why-list li code {
+        font-family: var(--font-mono);
+        font-size: .82em;
+        color: var(--accent-2);
+        background: rgba(129,140,248,.1);
+        border-radius: 4px;
+        padding: 1px 5px;
+    }
+
+    /* ── TOOLS GRID ── */
+    .tools-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+        gap: 16px;
+        margin-top: 8px;
+    }
+
+    article {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-lg);
+        padding: 28px;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        transition: border-color var(--transition), transform var(--transition), box-shadow var(--transition);
+        position: relative;
+        overflow: hidden;
+    }
+
+    article::before {
+        content: '';
+        position: absolute;
+        top: 0; left: 0; right: 0;
+        height: 2px;
+        background: linear-gradient(90deg, var(--accent), var(--accent-2));
+        opacity: 0;
+        transition: opacity var(--transition);
+    }
+
+    article:hover {
+        border-color: var(--border-hi);
+        transform: translateY(-3px);
+        box-shadow: 0 20px 48px rgba(0,0,0,.4), 0 0 0 1px rgba(59,130,246,.08);
+    }
+
+    article:hover::before { opacity: 1; }
+
+    .tool-icon {
+        width: 38px; height: 38px;
+        border-radius: 9px;
+        background: rgba(59,130,246,.08);
+        border: 1px solid rgba(59,130,246,.2);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-family: var(--font-mono);
+        font-size: 13px;
+        color: var(--accent);
+        margin-bottom: 4px;
+        flex-shrink: 0;
+    }
+
+    article h3 {
+        font-family: var(--font-body);
+        font-size: 1rem;
+        font-weight: 500;
+        color: #fff;
+        line-height: 1.3;
+    }
+
+    article p {
+        font-size: .875rem;
+        color: var(--muted);
+        margin: 0;
+        flex: 1;
+        font-weight: 300;
+    }
+
+    article p code {
+        font-family: var(--font-mono);
+        font-size: .82em;
+        color: var(--accent-2);
+        background: rgba(129,140,248,.1);
+        border-radius: 4px;
+        padding: 1px 5px;
+    }
+
+    article a {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        font-family: var(--font-mono);
+        font-size: .76rem;
+        font-weight: 500;
+        letter-spacing: .05em;
+        color: var(--accent);
+        text-decoration: none;
+        margin-top: 6px;
+        transition: gap var(--transition);
+    }
+
+    article a::after { content: '↗'; font-size: .85em; transition: transform var(--transition); }
+    article a:hover { gap: 10px; }
+    article a:hover::after { transform: translate(2px, -2px); }
+
+    /* ── USE CASES ── */
+    .use-list {
+        list-style: none;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .use-list li {
+        display: flex;
+        align-items: flex-start;
+        gap: 10px;
+        font-size: .95rem;
+        color: var(--text);
+    }
+
+    .use-list li::before {
+        content: '→';
+        color: var(--accent);
+        font-family: var(--font-mono);
+        font-size: .75rem;
+        margin-top: 4px;
+        flex-shrink: 0;
+    }
+
+    .use-list li code {
+        font-family: var(--font-mono);
+        font-size: .82em;
+        color: var(--accent-2);
+        background: rgba(129,140,248,.1);
+        border-radius: 4px;
+        padding: 1px 5px;
+    }
+
+    /* ── LONG-TAIL TAGS ── */
+    .tag-list {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        list-style: none;
+        margin-top: 4px;
+    }
+
+    .tag-list li {
+        font-family: var(--font-mono);
+        font-size: .76rem;
+        color: var(--muted);
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 100px;
+        padding: 5px 14px;
+        transition: color var(--transition), border-color var(--transition);
+        cursor: default;
+    }
+
+    .tag-list li:hover {
+        color: var(--text);
+        border-color: var(--border-hi);
+    }
+
+    /* ── FAQ SECTION ── */
+    .faq-list {
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+    }
+
+    .faq-item {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        padding: 20px 22px;
+    }
+
+    .faq-q {
+        font-size: .95rem;
+        font-weight: 500;
+        color: #fff;
+        margin-bottom: 8px;
+    }
+
+    .faq-a {
+        font-size: .875rem;
+        color: var(--muted);
+        font-weight: 300;
+        line-height: 1.6;
+    }
+
+    .faq-a code {
+        font-family: var(--font-mono);
+        font-size: .82em;
+        color: var(--accent-2);
+        background: rgba(129,140,248,.1);
+        border-radius: 4px;
+        padding: 1px 5px;
+    }
+
+    /* ── FOOTER ── */
+    footer {
+        padding: 40px 0;
+        border-top: 1px solid var(--border);
+    }
+
+    footer p {
+        font-size: .875rem;
+        color: var(--muted);
+        font-weight: 300;
+    }
+
+    footer p span { color: var(--accent); }
+
+    /* ── ANIMATIONS ── */
+    @keyframes fadeUp {
+        from { opacity: 0; transform: translateY(16px); }
+        to   { opacity: 1; transform: translateY(0); }
+    }
+
+    header                 { animation: fadeUp .6s ease both; }
+    section:nth-of-type(1) { animation: fadeUp .6s .1s ease both; }
+    section:nth-of-type(2) { animation: fadeUp .6s .15s ease both; }
+    section:nth-of-type(3) { animation: fadeUp .6s .2s ease both; }
+    section:nth-of-type(4) { animation: fadeUp .6s .25s ease both; }
+    section:nth-of-type(5) { animation: fadeUp .6s .3s ease both; }
+
+    /* ── RESPONSIVE ── */
+    @media (max-width: 600px) {
+        header { padding: 52px 0 44px; }
+        .tools-grid { grid-template-columns: 1fr; }
+        .why-list   { grid-template-columns: 1fr; }
+        article { padding: 22px; }
+    }
+</style>
+```
 
 </head>
 
 <body>
+<div class="wrapper">
 
+```
 <header>
-    <h1>TypeScript Migration & Refactoring Tools</h1>
-    <p>
-        Simplify the transition from JavaScript to TypeScript with powerful migration tools. 
-        Analyze legacy code, detect weak typing, and automate refactoring to improve code quality, 
-        maintainability, and scalability.
-    </p>
+    <div class="header-inner">
+        <span class="header-badge">TypeScript Migration Suite</span>
+        <h1>TypeScript Migration<br>&amp; <em>Refactoring</em> Tools</h1>
+        <p>
+            Simplify the transition from JavaScript to TypeScript with tools built for real codebases.
+            Detect weak typing, analyze legacy code risks, convert JS files automatically,
+            and refactor safely — step by step.
+        </p>
+    </div>
 </header>
 
 <section>
     <h2>Why Use TypeScript Migration Tools?</h2>
     <p>
-        Migrating to TypeScript can be complex, especially in large or legacy codebases. 
-        These tools help reduce friction and guide the transition step by step.
+        Migrating to TypeScript reduces runtime errors, improves IDE support, and makes large codebases
+        dramatically easier to maintain. These tools remove the manual guesswork from the migration process.
     </p>
-    <ul>
-        <li>Detect unsafe <code>any</code> types</li>
-        <li>Convert JavaScript codebases to TypeScript</li>
-        <li>Analyze legacy code structure and risks</li>
-        <li>Assist with safe refactoring strategies</li>
-        <li>Improve type safety progressively</li>
+    <ul class="why-list">
+        <li>Detect unsafe <code>any</code> types before they cause runtime bugs</li>
+        <li>Convert JavaScript files to TypeScript with type suggestions</li>
+        <li>Analyze legacy code structure, complexity, and migration risks</li>
+        <li>Get refactoring guidance for safer, more maintainable code</li>
+        <li>Adopt TypeScript incrementally without breaking changes</li>
+        <li>Improve IDE autocompletion, navigation, and error detection</li>
     </ul>
 </section>
 
 <section>
-    <h2>TypeScript Migration Tools List</h2>
+    <h2>TypeScript Migration Tools</h2>
 
-    <article>
-        <h3>Any Type Detector</h3>
-        <p>
-            Detect usage of the <code>any</code> type and identify weakly typed areas in your codebase.
-        </p>
-        <a href="/ts_migration_tools/typescript_any_type_detector">Open Any Type Detector</a>
-    </article>
+    <div class="tools-grid">
 
-    <article>
-        <h3>JavaScript to TypeScript Converter</h3>
-        <p>
-            Convert JavaScript files into TypeScript with automated type suggestions.
-        </p>
-        <a href="/ts_migration_tools/typescript_convert_js_to_ts">Open JS to TS Converter</a>
-    </article>
+        <article>
+            <div class="tool-icon">any</div>
+            <h3>TypeScript Any Type Detector</h3>
+            <p>
+                Scan your codebase for <code>any</code> type usage and pinpoint weakly typed areas
+                that risk runtime errors and break type safety.
+            </p>
+            <a href="/ts_migration_tools/typescript_any_type_detector">Open Any Type Detector</a>
+        </article>
 
-    <article>
-        <h3>Legacy Code Analyzer</h3>
-        <p>
-            Analyze legacy codebases to identify migration challenges and risks.
-        </p>
-        <a href="/ts_migration_tools/typescript_legacy_code_analyzer">Open Legacy Analyzer</a>
-    </article>
+        <article>
+            <div class="tool-icon">JS→</div>
+            <h3>JavaScript to TypeScript Converter</h3>
+            <p>
+                Convert JavaScript files into TypeScript with automated type inference suggestions
+                and a structured migration output.
+            </p>
+            <a href="/ts_migration_tools/typescript_convert_js_to_ts">Open JS to TS Converter</a>
+        </article>
 
-    <article>
-        <h3>Refactor Assistant</h3>
-        <p>
-            Assist in refactoring code to improve type safety and structure during migration.
-        </p>
-        <a href="/ts_migration_tools/typescript_refactor_assistant">Open Refactor Assistant</a>
-    </article>
+        <article>
+            <div class="tool-icon">⚑</div>
+            <h3>Legacy Code Analyzer</h3>
+            <p>
+                Analyze legacy JavaScript or TypeScript codebases to identify migration complexity,
+                structural risks, and dependency issues.
+            </p>
+            <a href="/ts_migration_tools/typescript_legacy_code_analyzer">Open Legacy Analyzer</a>
+        </article>
 
+        <article>
+            <div class="tool-icon">◈</div>
+            <h3>TypeScript Refactor Assistant</h3>
+            <p>
+                Get step-by-step refactoring guidance to improve type safety, reduce <code>any</code>
+                usage, and restructure code for long-term maintainability.
+            </p>
+            <a href="/ts_migration_tools/typescript_refactor_assistant">Open Refactor Assistant</a>
+        </article>
+
+    </div>
 </section>
 
 <section>
     <h2>Use Cases</h2>
-    <ul>
-        <li>Migrating large JavaScript codebases to TypeScript</li>
-        <li>Reducing reliance on <code>any</code> types</li>
-        <li>Improving legacy code maintainability</li>
-        <li>Refactoring code for better type safety</li>
-        <li>Adopting TypeScript incrementally</li>
+    <ul class="use-list">
+        <li>Migrating a large JavaScript codebase to TypeScript incrementally</li>
+        <li>Reducing <code>any</code> type reliance in an existing TypeScript project</li>
+        <li>Assessing the complexity and risk of a legacy JS-to-TS migration</li>
+        <li>Refactoring code structure alongside type annotation adoption</li>
+        <li>Onboarding a team to TypeScript with guided tooling</li>
+        <li>Setting up strict mode after an initial loose migration</li>
     </ul>
 </section>
 
 <section>
-    <h2>Long-Tail Search Queries</h2>
-    <ul>
+    <h2>Frequently Asked Questions</h2>
+    <div class="faq-list">
+
+        <div class="faq-item">
+            <p class="faq-q">How do I migrate a JavaScript project to TypeScript without breaking everything?</p>
+            <p class="faq-a">
+                The safest approach is incremental migration. Start by renaming <code>.js</code> files to <code>.ts</code>
+                one at a time, use <code>allowJs: true</code> in your <code>tsconfig.json</code>, and progressively
+                add type annotations. Our JS to TS Converter and Legacy Code Analyzer streamline this process.
+            </p>
+        </div>
+
+        <div class="faq-item">
+            <p class="faq-q">Why is using <code>any</code> in TypeScript a problem?</p>
+            <p class="faq-a">
+                The <code>any</code> type disables TypeScript's type checker for that value, effectively opting
+                out of type safety. It spreads silently — a single <code>any</code> can propagate through your
+                codebase and cause runtime errors that TypeScript was designed to prevent.
+                Use the Any Type Detector to find and eliminate them.
+            </p>
+        </div>
+
+        <div class="faq-item">
+            <p class="faq-q">What is the best strategy for migrating legacy code to TypeScript?</p>
+            <p class="faq-a">
+                Run a legacy code analysis first to understand the scope. Then prioritize files with
+                the most dependents, use <code>noImplicitAny: false</code> initially to avoid blocking builds,
+                and tighten strictness gradually. Our Refactor Assistant provides step-by-step guidance
+                tailored to your codebase's complexity.
+            </p>
+        </div>
+
+        <div class="faq-item">
+            <p class="faq-q">Can I convert JavaScript to TypeScript automatically?</p>
+            <p class="faq-a">
+                Partially. Tools can infer types from usage patterns, rename files, and generate
+                <code>.d.ts</code> declaration stubs — but full type annotation still requires human review.
+                Our JS to TS Converter gives you a strong starting point with automated suggestions
+                that you can refine.
+            </p>
+        </div>
+
+    </div>
+</section>
+
+<section>
+    <h2>Common Search Queries</h2>
+    <ul class="tag-list">
         <li>how to migrate javascript project to typescript</li>
         <li>detect any type usage in typescript codebase</li>
         <li>convert js to ts automatically tool</li>
         <li>typescript legacy code analysis and refactoring</li>
-        <li>best practices for typescript migration</li>
-        <li>typescript refactor assistant tools for developers</li>
+        <li>best practices for typescript migration 2025</li>
+        <li>typescript refactor assistant for developers</li>
+        <li>how to remove any types from typescript</li>
+        <li>incremental typescript migration strategy</li>
+        <li>typescript strict mode migration guide</li>
+        <li>javascript to typescript type inference tool</li>
+        <li>migrate large codebase to typescript safely</li>
+        <li>typescript noImplicitAny migration steps</li>
     </ul>
 </section>
 
 <footer>
     <p>
-        Transition to TypeScript smoothly with tools designed to simplify migration, improve code quality, and scale your applications confidently.
+        Transition to TypeScript smoothly —
+        tools built to <span>detect</span>, <span>convert</span>, and <span>refactor</span>
+        your codebase with confidence.
     </p>
 </footer>
+```
 
+</div>
 </body>
 </html>
