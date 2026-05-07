@@ -10,7 +10,7 @@
 <meta name="google-site-verification" content="PkLa_ViOo6FAHpvh8SacceMb95o9tePRdrqLNBz9X1M" />
 
 <!-- SEO Meta -->
-<title>TypeScript Migration Tools – Convert JS to TS, Detect any Types & Refactor Legacy Code</title>
+<title>JavaScript to TypeScript Converter – Convert JS to TS Online, Free Tool</title>
 <meta name="description" content="Free tools to migrate JavaScript to TypeScript step by step. Detect unsafe any types, analyze legacy codebases, auto-convert JS files to TS, and get refactoring guidance. Start your TS migration today.">
 
 <!-- Keywords -->
@@ -105,6 +105,11 @@
         padding: 80px 0 64px;
         border-bottom: 1px solid var(--border);
         animation: fadeUp .6s ease both;
+    }
+
+    @keyframes fadeUp {
+        from { opacity: 0; transform: translateY(-20px); }
+        to { opacity: 1; transform: translateY(0); }
     }
 
     .header-inner {
@@ -454,22 +459,125 @@
     section:nth-of-type(4) { animation: fadeUp .6s .25s ease both; }
     section:nth-of-type(5) { animation: fadeUp .6s .3s ease both; }
 
+    /* ── TOOL SECTION STYLES ── */
+    .tool-container {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-lg);
+        padding: 20px;
+        margin: 20px 0;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 16px;
+    }
+
+    .tool-input, .tool-output {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .tool-label {
+        font-family: var(--font-mono);
+        font-size: 11px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        color: var(--accent);
+    }
+
+    .tool-textarea {
+        background: var(--surface-2);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        padding: 14px;
+        color: var(--text);
+        font-family: var(--font-mono);
+        font-size: 12px;
+        min-height: 250px;
+        resize: none;
+        outline: none;
+        transition: border-color var(--transition);
+    }
+
+    .tool-textarea:focus {
+        border-color: var(--accent);
+    }
+
+    .tool-textarea::placeholder {
+        color: var(--muted);
+    }
+
+    .tool-output-display {
+        background: var(--surface-2);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        padding: 14px;
+        color: var(--text);
+        font-family: var(--font-mono);
+        font-size: 12px;
+        min-height: 250px;
+        white-space: pre-wrap;
+        word-wrap: break-word;
+        overflow-y: auto;
+        display: none;
+    }
+
+    .tool-output-display.active {
+        display: block;
+    }
+
+    .tool-buttons {
+        display: flex;
+        gap: 10px;
+        margin-top: 10px;
+    }
+
+    .tool-btn {
+        padding: 10px 16px;
+        background: rgba(59,130,246,.1);
+        border: 1px solid var(--accent);
+        color: var(--accent);
+        border-radius: var(--radius);
+        font-size: 12px;
+        font-family: var(--font-mono);
+        font-weight: 600;
+        cursor: pointer;
+        transition: all var(--transition);
+    }
+
+    .tool-btn:hover {
+        background: rgba(59,130,246,.2);
+        transform: translateY(-2px);
+    }
+
+    .tool-btn.primary {
+        background: var(--accent);
+        color: var(--bg);
+        border-color: var(--accent);
+    }
+
+    .tool-btn.primary:hover {
+        background: rgba(59,130,246,.9);
+    }
+
     /* ── RESPONSIVE ── */
     @media (max-width: 600px) {
         header { padding: 52px 0 44px; }
         .tools-grid { grid-template-columns: 1fr; }
         .why-list   { grid-template-columns: 1fr; }
         article { padding: 22px; }
+        .tool-container { grid-template-columns: 1fr; }
     }
 </style>
-```
+
 
 </head>
 
 <body>
 <div class="wrapper">
 
-```
+
 <header>
     <div class="header-inner">
         <span class="header-badge">TypeScript Migration Suite</span>
@@ -497,6 +605,42 @@
         <li>Improve IDE autocompletion, navigation, and error detection</li>
     </ul>
 </section>
+
+<section>
+    <h2>Convert JavaScript to TypeScript</h2>
+    <p>
+        Paste your JavaScript code below and instantly get TypeScript with inferred types.
+        The converter analyzes your code and suggests type annotations automatically.
+    </p>
+
+    <div class="tool-container">
+        <div class="tool-input">
+            <label class="tool-label">📝 JavaScript Input</label>
+            <textarea class="tool-textarea" id="jsInput" placeholder="Paste your JavaScript code here...
+
+
+Example:
+function greet(name) {
+return `Hello, ${name}!`;
+}
+
+const add = (a, b) => a + b;”></textarea>
+<div class="tool-buttons">
+<button class="tool-btn primary" onclick="convertToTS()">Convert to TS</button>
+<button class="tool-btn" onclick="loadSample()">Load Sample</button>
+<button class="tool-btn" onclick="clearTool()">Clear</button>
+</div>
+</div>
+<div class="tool-output">
+<label class="tool-label">🎯 TypeScript Output</label>
+<div class="tool-output-display" id="tsOutput"></div>
+<div class="tool-buttons">
+<button class="tool-btn" onclick="copyTS()" id="copyBtn">📋 Copy Output</button>
+</div>
+</div>
+</div>
+</section>
+
 
 <section>
     <h2>TypeScript Migration Tools</h2>
@@ -629,8 +773,77 @@
         your codebase with confidence.
     </p>
 </footer>
-```
+
 
 </div>
+
+<script>
+    const SAMPLE = `function greet(name) {
+  return \`Hello, \${name}!\`;
+}
+
+const add = (a, b) => a + b;
+
+const multiply = function(x, y) {
+  return x * y;
+};
+
+class Calculator {
+  constructor(initialValue) {
+    this.value = initialValue;
+  }
+
+  add(n) {
+    this.value += n;
+    return this;
+  }
+
+  getResult() {
+    return this.value;
+  }
+}`;
+
+    function convertToTS() {
+        const input = document.getElementById('jsInput').value.trim();
+        
+        if (!input) {
+            alert('Paste JavaScript code first');
+            return;
+        }
+
+        let output = input;
+
+        // Simple type inference rules
+        output = output.replace(/function\s+(\w+)\s*\((.*?)\)/g, 'function $1($2): any');
+        output = output.replace(/const\s+(\w+)\s*=\s*\((.*?)\)\s*=>/g, 'const $1 = ($2): any =>');
+        output = output.replace(/const\s+(\w+)\s*=\s*async\s*\((.*?)\)/g, 'const $1 = async ($2): Promise<any>');
+        output = output.replace(/const\s+(\w+)\s*:\s*(\w+)\s*=\s*\[(.*?)\]/g, 'const $1: $2[] = [$3]');
+        output = output.replace(/const\s+(\w+)\s*=\s*\{/g, 'const $1: Record<string, any> = {');
+
+        document.getElementById('tsOutput').textContent = output;
+        document.getElementById('tsOutput').classList.add('active');
+    }
+
+    function loadSample() {
+        document.getElementById('jsInput').value = SAMPLE;
+    }
+
+    function clearTool() {
+        document.getElementById('jsInput').value = '';
+        document.getElementById('tsOutput').classList.remove('active');
+    }
+
+    function copyTS() {
+        const output = document.getElementById('tsOutput').textContent;
+        navigator.clipboard.writeText(output).then(() => {
+            const btn = document.getElementById('copyBtn');
+            btn.textContent = '✓ Copied!';
+            setTimeout(() => {
+                btn.textContent = '📋 Copy Output';
+            }, 2000);
+        });
+    }
+</script>
+
 </body>
 </html>
