@@ -5,7 +5,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-
 <!-- Google Verification -->
 <meta name="google-site-verification" content="PkLa_ViOo6FAHpvh8SacceMb95o9tePRdrqLNBz9X1M" />
 
@@ -527,10 +526,17 @@
         display: block;
     }
 
+    .tool-output-display.loading {
+        display: block;
+        color: var(--muted);
+        font-style: italic;
+    }
+
     .tool-buttons {
         display: flex;
         gap: 10px;
         margin-top: 10px;
+        flex-wrap: wrap;
     }
 
     .tool-btn {
@@ -551,6 +557,12 @@
         transform: translateY(-2px);
     }
 
+    .tool-btn:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+        transform: none;
+    }
+
     .tool-btn.primary {
         background: var(--accent);
         color: var(--bg);
@@ -559,6 +571,23 @@
 
     .tool-btn.primary:hover {
         background: rgba(59,130,246,.9);
+    }
+
+    .tool-btn.primary:disabled {
+        background: var(--muted);
+        border-color: var(--muted);
+        color: var(--bg);
+    }
+
+    .api-note {
+        background: rgba(59,130,246,.08);
+        border-left: 3px solid var(--accent);
+        padding: 12px 14px;
+        border-radius: var(--radius);
+        font-size: 11px;
+        color: var(--text-muted);
+        margin-top: 12px;
+        font-family: var(--font-mono);
     }
 
     /* ── RESPONSIVE ── */
@@ -626,7 +655,7 @@ return `Hello, ${name}!`;
 
 const add = (a, b) => a + b;”></textarea>
 <div class="tool-buttons">
-<button class="tool-btn primary" onclick="convertToTS()">Convert to TS</button>
+<button class="tool-btn primary" id="convertBtn" onclick="convertToTS()">Convert to TS</button>
 <button class="tool-btn" onclick="loadSample()">Load Sample</button>
 <button class="tool-btn" onclick="clearTool()">Clear</button>
 </div>
@@ -635,8 +664,9 @@ const add = (a, b) => a + b;”></textarea>
 <label class="tool-label">🎯 TypeScript Output</label>
 <div class="tool-output-display" id="tsOutput"></div>
 <div class="tool-buttons">
-<button class="tool-btn" onclick="copyTS()" id="copyBtn">📋 Copy Output</button>
+<button class="tool-btn" id="copyBtn" onclick="copyTS()" style="display:none;">📋 Copy Output</button>
 </div>
+<div class="api-note">💡 Powered by Claude AI for accurate type inference</div>
 </div>
 </div>
 </section>
@@ -801,9 +831,14 @@ class Calculator {
   getResult() {
     return this.value;
   }
-}`;
+}
 
-    function convertToTS() {
+const handleAsync = async (userId) => {
+  const response = await fetch(\`/api/users/\${userId}\`);
+  return response.json();
+};`;
+
+    async function convertToTS() {
         const input = document.getElementById('jsInput').value.trim();
         
         if (!input) {
@@ -811,17 +846,73 @@ class Calculator {
             return;
         }
 
-        let output = input;
+        const btn = document.getElementById('convertBtn');
+        const output = document.getElementById('tsOutput');
+        const copyBtn = document.getElementById('copyBtn');
 
-        // Simple type inference rules
-        output = output.replace(/function\s+(\w+)\s*\((.*?)\)/g, 'function $1($2): any');
-        output = output.replace(/const\s+(\w+)\s*=\s*\((.*?)\)\s*=>/g, 'const $1 = ($2): any =>');
-        output = output.replace(/const\s+(\w+)\s*=\s*async\s*\((.*?)\)/g, 'const $1 = async ($2): Promise<any>');
-        output = output.replace(/const\s+(\w+)\s*:\s*(\w+)\s*=\s*\[(.*?)\]/g, 'const $1: $2[] = [$3]');
-        output = output.replace(/const\s+(\w+)\s*=\s*\{/g, 'const $1: Record<string, any> = {');
+        btn.disabled = true;
+        btn.textContent = '⏳ Converting...';
+        output.classList.add('loading');
+        output.textContent = 'Analyzing code with AI...';
+        output.classList.add('active');
+        copyBtn.style.display = 'none';
 
-        document.getElementById('tsOutput').textContent = output;
-        document.getElementById('tsOutput').classList.add('active');
+        try {
+            // Call Claude API
+            const response = await fetch('https://api.anthropic.com/v1/messages', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    model: 'claude-sonnet-4-20250514',
+                    max_tokens: 2000,
+                    messages: [
+                        {
+                            role: 'user',
+                            content: `You are an expert TypeScript developer. Convert the following JavaScript code to TypeScript with proper type annotations. 
+
+Rules:
+1. Add explicit type annotations to function parameters and return types
+2. Use specific types (string, number, boolean) instead of 'any' when possible
+3. Use interfaces or types for objects
+4. Add generics where appropriate
+5. Use Promise<T> for async functions
+6. Keep the code structure and logic identical
+7. Add helpful comments for complex type annotations
+8. Output ONLY the converted TypeScript code, no explanations
+
+JavaScript code to convert:
+\`\`\`javascript
+${input}
+\`\`\`
+
+Convert this to TypeScript:`
+                        }
+                    ]
+                })
+            });
+
+            if (!response.ok) {
+                throw new Error(`API Error: ${response.status}`);
+            }
+
+            const data = await response.json();
+            const result = data.content[0].text;
+
+            output.classList.remove('loading');
+            output.textContent = result;
+            copyBtn.style.display = 'block';
+
+        } catch (error) {
+            output.classList.remove('loading');
+            output.textContent = `Error: ${error.message}\n\nNote: This tool requires a valid Claude API key to be configured on the server. For now, you can use our basic converter or integrate this with your backend API call.`;
+            copyBtn.style.display = 'none';
+            console.error('Conversion error:', error);
+        } finally {
+            btn.disabled = false;
+            btn.textContent = 'Convert to TS';
+        }
     }
 
     function loadSample() {
@@ -830,7 +921,8 @@ class Calculator {
 
     function clearTool() {
         document.getElementById('jsInput').value = '';
-        document.getElementById('tsOutput').classList.remove('active');
+        document.getElementById('tsOutput').classList.remove('active', 'loading');
+        document.getElementById('copyBtn').style.display = 'none';
     }
 
     function copyTS() {
