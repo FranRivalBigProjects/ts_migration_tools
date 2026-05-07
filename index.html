@@ -838,82 +838,64 @@ const handleAsync = async (userId) => {
   return response.json();
 };`;
 
-    async function convertToTS() {
-        const input = document.getElementById('jsInput').value.trim();
-        
-        if (!input) {
-            alert('Paste JavaScript code first');
-            return;
-        }
+    const RAILWAY_API_URL = 'https://js-to-ts-cursor-production.up.railway.app/api/convert';
 
-        const btn = document.getElementById('convertBtn');
-        const output = document.getElementById('tsOutput');
-        const copyBtn = document.getElementById('copyBtn');
-
-        btn.disabled = true;
-        btn.textContent = '⏳ Converting...';
-        output.classList.add('loading');
-        output.textContent = 'Analyzing code with AI...';
-        output.classList.add('active');
-        copyBtn.style.display = 'none';
-
-        try {
-            // Call Claude API
-            const response = await fetch('https://api.anthropic.com/v1/messages', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    model: 'claude-sonnet-4-20250514',
-                    max_tokens: 2000,
-                    messages: [
-                        {
-                            role: 'user',
-                            content: `You are an expert TypeScript developer. Convert the following JavaScript code to TypeScript with proper type annotations. 
-
-Rules:
-1. Add explicit type annotations to function parameters and return types
-2. Use specific types (string, number, boolean) instead of 'any' when possible
-3. Use interfaces or types for objects
-4. Add generics where appropriate
-5. Use Promise<T> for async functions
-6. Keep the code structure and logic identical
-7. Add helpful comments for complex type annotations
-8. Output ONLY the converted TypeScript code, no explanations
-
-JavaScript code to convert:
-\`\`\`javascript
-${input}
-\`\`\`
-
-Convert this to TypeScript:`
-                        }
-                    ]
-                })
-            });
-
-            if (!response.ok) {
-                throw new Error(`API Error: ${response.status}`);
-            }
-
-            const data = await response.json();
-            const result = data.content[0].text;
-
-            output.classList.remove('loading');
-            output.textContent = result;
-            copyBtn.style.display = 'block';
-
-        } catch (error) {
-            output.classList.remove('loading');
-            output.textContent = `Error: ${error.message}\n\nNote: This tool requires a valid Claude API key to be configured on the server. For now, you can use our basic converter or integrate this with your backend API call.`;
-            copyBtn.style.display = 'none';
-            console.error('Conversion error:', error);
-        } finally {
-            btn.disabled = false;
-            btn.textContent = 'Convert to TS';
-        }
+async function convertToTS() {
+    const input = document.getElementById('jsInput').value.trim();
+    
+    if (!input) {
+        alert('Paste JavaScript code first');
+        return;
     }
+
+    const btn = document.getElementById('convertBtn');
+    const output = document.getElementById('tsOutput');
+    const copyBtn = document.getElementById('copyBtn');
+
+    btn.disabled = true;
+    btn.textContent = '⏳ Converting...';
+    output.classList.add('loading');
+    output.textContent = 'Analyzing code with Claude AI...';
+    output.classList.add('active');
+    copyBtn.style.display = 'none';
+
+    try {
+        const response = await fetch(RAILWAY_API_URL, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                code: input
+            })
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.error || `API Error: ${response.status}`);
+        }
+
+        const data = await response.json();
+
+        if (!data.success || !data.code) {
+            throw new Error('Invalid response from API');
+        }
+
+        output.classList.remove('loading');
+        output.textContent = data.code;
+        copyBtn.style.display = 'block';
+
+    } catch (error) {
+        output.classList.remove('loading');
+        output.textContent = `❌ Error: ${error.message}`;
+        copyBtn.style.display = 'none';
+        console.error('Conversion error:', error);
+    } finally {
+        btn.disabled = false;
+        btn.textContent = 'Convert to TS';
+    }
+}
+
 
     function loadSample() {
         document.getElementById('jsInput').value = SAMPLE;
